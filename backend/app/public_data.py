@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
-configured_path = os.getenv("BUSAN_DATA_DIR", "./data/busan")
+configured_path = os.getenv("BUSAN_DATA_DIR", "../docs")
 BUSAN_DATA_DIR = (
     Path(configured_path)
     if Path(configured_path).is_absolute()

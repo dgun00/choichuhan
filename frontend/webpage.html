@@ -10,6 +10,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- LocalHub API 설정 -->
+  <script src="./config.js"></script>
   
   <script>
     // Tailwind 커스텀 색상 (세룰리안 블루 계열) 및 글래스모피즘 유틸리티
@@ -267,17 +269,23 @@
 
   <!-- Vue 3 및 Chart.js 구동 스크립트 -->
   <script>
-    const { createApp, ref, computed, onMounted, nextTick } = Vue;
+    const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
+    const API_BASE = window.LOCALHUB_API_BASE || 'http://127.0.0.1:8000';
+    const ACTIVE_TAB_KEY = 'localhub.currentTab';
 
     createApp({
       setup() {
-        const currentTab = ref('home');
+        const currentTab = ref(localStorage.getItem(ACTIVE_TAB_KEY) || 'home');
         const showWriteModal = ref(false);
         const selectedPost = ref(null);
         const pwdMode = ref(null);
         const inputPwd = ref('');
         const searchKeyword = ref('');
         const selectedCategory = ref('전체');
+
+        watch(currentTab, (tab) => {
+          localStorage.setItem(ACTIVE_TAB_KEY, tab);
+        });
 
         const categories = ['전체', '관광지', '맛집', '축제·행사', '자유'];
 
@@ -292,18 +300,53 @@
           }
         };
 
-        // 🚨 [FE 더미 데이터 영역] : BE 개발자가 API를 완료하면 axios.get('/api/posts')로 교체!
-        const posts = ref([
+        const fallbackPosts = [
           { id: 7, category: '맛집', title: '부산 광안리 국밥 찐맛집 추천합니다', content: '공공데이터에 등록된 ㅇㅇ국밥 가봤는데 국물이 진짜 진하고 고기 양이 엄청나네요. 주차장도 넓어서 광안리 드라이브 가실 때 강추합니다!', password: '1234', views: 42, likes: 15 },
-          { id: 6, category: '축제·행사', title: ' 이번 주말 광안리 어방축제 일정 공유', content: '공공데이터 축제 캘린더 보니까 이번 주 토요일 저녁에 드론쇼랑 불꽃놀이 같이 한다고 합니다. 꿀팁 자리 공유해요!', password: '1234', views: 88, likes: 32 },
+          { id: 6, category: '축제·행사', title: '이번 주말 광안리 어방축제 일정 공유', content: '공공데이터 축제 캘린더 보니까 이번 주 토요일 저녁에 드론쇼랑 불꽃놀이 같이 한다고 합니다. 꿀팁 자리 공유해요!', password: '1234', views: 88, likes: 32 },
           { id: 5, category: '관광지', title: '해운대 블루라인파크 캡슐 열차 예약 팁', content: '현장 예매는 주말에 절대 불가입니다. 최소 2주 전에 공식 홈페이지 열릴 때 바로 잡으셔야 노을 지는 시간대 탑승 가능해요.', password: '1111', views: 65, likes: 19 },
           { id: 4, category: '자유', title: '영도 카페거리 주차하기 편한 곳 어디인가요?', content: '초보 운전인데 영도 오르막길이 좀 무서워서요. 평지 쪽에 주차장 넓은 대형 카페 추천 부탁드립니다~', password: '0000', views: 24, likes: 4 },
           { id: 3, category: '맛집', title: '남포동 이재모피자 웨이팅 실시간 상황', content: '화요일 오후 2시 기준 웨이팅 40팀 있습니다. 포장 주문은 키오스크로 바로 가능하니 참고하세요!', password: '1234', views: 112, likes: 28 },
           { id: 2, category: '관광지', title: '송도 해상케이블카 바닥 투명한 크리스탈 후기', content: '바닥이 아예 유리로 뚫려 있어서 바다 내려다보는 맛이 있습니다. 고소공포증 있으시면 일반 캐빈 타세요ㅎㅎ', password: '1234', views: 53, likes: 11 },
           { id: 1, category: '자유', title: 'LocalHub 부산 커뮤니티 오픈 축하합니다 🥳', content: '로그인 없이 바로 글 쓸 수 있어서 너무 편하네요! 앞으로 좋은 지역 정보 많이 나누었으면 좋겠습니다.', password: '1234', views: 95, likes: 45 },
-        ]);
+        ];
 
+        const posts = ref([...fallbackPosts]);
         const newPost = ref({ category: '맛집', title: '', content: '', password: '' });
+
+        let chartInstance = null;
+        const updateChart = () => {
+          if (!chartInstance) return;
+          const counts = [
+            posts.value.filter(p => p.category === '관광지').length,
+            posts.value.filter(p => p.category === '맛집').length,
+            posts.value.filter(p => p.category === '축제·행사').length,
+            posts.value.filter(p => p.category === '자유').length,
+          ];
+          chartInstance.data.datasets[0].data = counts;
+          chartInstance.update();
+        };
+
+        const syncSelectedPost = (updatedPost) => {
+          posts.value = posts.value.map(post => post.id === updatedPost.id ? updatedPost : post);
+          if (selectedPost.value && selectedPost.value.id === updatedPost.id) {
+            selectedPost.value = updatedPost;
+          }
+          updateChart();
+        };
+
+        const loadPosts = async () => {
+          try {
+            const response = await fetch(`${API_BASE}/api/posts`);
+            if (!response.ok) {
+              throw new Error('게시글 목록을 불러오지 못했습니다.');
+            }
+            posts.value = await response.json();
+          } catch (error) {
+            console.error(error);
+            posts.value = [...fallbackPosts];
+          }
+          updateChart();
+        };
 
         // 실시간 검색 및 카테고리 필터링
         const filteredPosts = computed(() => {
@@ -318,50 +361,133 @@
           return [...posts.value].sort((a, b) => b.likes - a.likes).slice(0, 5);
         });
 
-        // 🚨 [BE 연동 구역] 게시글 작성 API 호출로 변경
-        const submitPost = () => {
+        const submitPost = async () => {
           if (!newPost.value.title || !newPost.value.content || !newPost.value.password) {
             alert('제목, 내용, 수정용 비밀번호를 모두 입력해 주세요!');
             return;
           }
-          const newId = posts.value.length > 0 ? Math.max(...posts.value.map(p => p.id)) + 1 : 1;
-          posts.value.unshift({ id: newId, ...newPost.value, views: 0, likes: 0 });
-          newPost.value = { category: '맛집', title: '', content: '', password: '' };
-          showWriteModal.value = false;
-          updateChart(); // 대시보드 차트 동기화
+
+          try {
+            const response = await fetch(`${API_BASE}/api/posts`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(newPost.value),
+            });
+
+            if (!response.ok) {
+              const errorBody = await response.json().catch(() => null);
+              throw new Error(errorBody?.detail || '게시글 등록에 실패했습니다.');
+            }
+
+            const createdPost = await response.json();
+            posts.value.unshift(createdPost);
+            newPost.value = { category: '맛집', title: '', content: '', password: '' };
+            showWriteModal.value = false;
+            updateChart();
+          } catch (error) {
+            alert(error.message || '게시글 등록에 실패했습니다.');
+          }
         };
 
-        const openDetail = (post) => {
-          post.views++; // 🚨 [BE 연동 구역] axios.get(`/api/posts/${post.id}`) 호출 시 백엔드에서 조회수 증가
-          selectedPost.value = post;
-          pwdMode.value = null;
-          inputPwd.value = '';
+        const openDetail = async (post) => {
+          try {
+            const response = await fetch(`${API_BASE}/api/posts/${post.id}`);
+            if (!response.ok) {
+              const errorBody = await response.json().catch(() => null);
+              throw new Error(errorBody?.detail || '게시글을 불러오지 못했습니다.');
+            }
+
+            const latestPost = await response.json();
+            syncSelectedPost(latestPost);
+            selectedPost.value = latestPost;
+            pwdMode.value = null;
+            inputPwd.value = '';
+          } catch (error) {
+            alert(error.message || '게시글을 불러오지 못했습니다.');
+          }
         };
 
-        const likePost = (post) => {
-          post.likes++; // 🚨 [BE 연동 구역] axios.post(`/api/posts/${post.id}/like`) 로 갈아끼우기
+        const likePost = async (post) => {
+          try {
+            const response = await fetch(`${API_BASE}/api/posts/${post.id}/like`, {
+              method: 'POST',
+            });
+
+            if (!response.ok) {
+              const errorBody = await response.json().catch(() => null);
+              throw new Error(errorBody?.detail || '좋아요 반영에 실패했습니다.');
+            }
+
+            const updatedPost = await response.json();
+            syncSelectedPost(updatedPost);
+          } catch (error) {
+            alert(error.message || '좋아요 반영에 실패했습니다.');
+          }
         };
 
-        // 평문 비밀번호 검증 (의도된 RFP 교육 목적 설계)
-        const verifyPassword = () => {
-          if (inputPwd.value === selectedPost.value.password) {
+        const verifyPassword = async () => {
+          if (!selectedPost.value || !inputPwd.value.trim()) {
+            alert('비밀번호를 입력해 주세요.');
+            return;
+          }
+
+          try {
             if (pwdMode.value === 'delete') {
-              posts.value = posts.value.filter(p => p.id !== selectedPost.value.id);
+              const response = await fetch(`${API_BASE}/api/posts/${selectedPost.value.id}`, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ password: inputPwd.value }),
+              });
+
+              if (!response.ok) {
+                const errorBody = await response.json().catch(() => null);
+                throw new Error(errorBody?.detail || '비밀번호가 일치하지 않습니다.');
+              }
+
+              posts.value = posts.value.filter(post => post.id !== selectedPost.value.id);
               selectedPost.value = null;
+              pwdMode.value = null;
               updateChart();
             } else if (pwdMode.value === 'edit') {
               const newTitle = prompt('수정할 제목:', selectedPost.value.title);
               const newContent = prompt('수정할 내용:', selectedPost.value.content);
-              if (newTitle && newContent) {
-                selectedPost.value.title = newTitle;
-                selectedPost.value.content = newContent;
+
+              if (!newTitle || !newContent) {
+                pwdMode.value = null;
+                return;
               }
+
+              const response = await fetch(`${API_BASE}/api/posts/${selectedPost.value.id}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  password: inputPwd.value,
+                  category: selectedPost.value.category,
+                  title: newTitle,
+                  content: newContent,
+                }),
+              });
+
+              if (!response.ok) {
+                const errorBody = await response.json().catch(() => null);
+                throw new Error(errorBody?.detail || '비밀번호가 일치하지 않습니다.');
+              }
+
+              const updatedPost = await response.json();
+              syncSelectedPost(updatedPost);
               pwdMode.value = null;
             }
-          } else {
-            alert('🚨 비밀번호가 일치하지 않습니다! (평문 비교 일치 필요)');
+          } catch (error) {
+            alert(error.message || '게시글 처리에 실패했습니다.');
+          } finally {
+            inputPwd.value = '';
           }
-          inputPwd.value = '';
         };
 
         // 🚨 [챗봇 AI 연동 구역] 브라우저 메모리에 대화 보관 후 POST /api/chat 호출
@@ -386,46 +512,33 @@
           }, 800);
         };
 
-        // Chart.js 톤온톤(Tone-on-Tone) 시각화 초기화
-        let chartInstance = null;
-        const updateChart = () => {
-          if (!chartInstance) return;
-          const counts = [
-            posts.value.filter(p => p.category === '관광지').length,
-            posts.value.filter(p => p.category === '맛집').length,
-            posts.value.filter(p => p.category === '축제·행사').length,
-            posts.value.filter(p => p.category === '자유').length,
-          ];
-          chartInstance.data.datasets[0].data = counts;
-          chartInstance.update();
-        };
+        onMounted(async () => {
+          await nextTick();
 
-        onMounted(() => {
-          nextTick(() => {
-            const ctx = document.getElementById('categoryChart')?.getContext('2d');
-            if (ctx) {
-              chartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                  labels: ['🏝️ 관광지', '🍲 맛집', '🎪 축제·행사', '💬 자유'],
-                  datasets: [{
-                    data: [2, 3, 1, 1],
-                    // 요청하신 세룰리안 블루 계열 톤온톤 컬러 적용 (혼잡하지 않음)
-                    backgroundColor: ['#0f4c81', '#0284c7', '#38bdf8', '#bae6fd'],
-                    borderColor: '#ffffff',
-                    borderWidth: 2,
-                  }]
-                },
-                options: {
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: { legend: { position: 'right', labels: { font: { family: 'sans-serif', size: 11 } } } },
-                  cutout: '65%'
-                }
-              });
-              updateChart();
-            }
-          });
+          const ctx = document.getElementById('categoryChart')?.getContext('2d');
+          if (ctx) {
+            chartInstance = new Chart(ctx, {
+              type: 'doughnut',
+              data: {
+                labels: ['🏝️ 관광지', '🍲 맛집', '🎪 축제·행사', '💬 자유'],
+                datasets: [{
+                  data: [2, 3, 1, 1],
+                  // 요청하신 세룰리안 블루 계열 톤온톤 컬러 적용 (혼잡하지 않음)
+                  backgroundColor: ['#0f4c81', '#0284c7', '#38bdf8', '#bae6fd'],
+                  borderColor: '#ffffff',
+                  borderWidth: 2,
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right', labels: { font: { family: 'sans-serif', size: 11 } } } },
+                cutout: '65%'
+              }
+            });
+          }
+
+          await loadPosts();
         });
 
         return {
