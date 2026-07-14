@@ -121,10 +121,7 @@ def _format_public_context(items: list[dict[str, object]]) -> str:
     lines = []
     for index, item in enumerate(items, start=1):
         lines.append(
-            f"[{index}] 출처 파일: {item.get('source_file', '')}\n"
-            f"카테고리: {item.get('category', '')}\n"
-            f"제목: {item.get('title', '')}\n"
-            f"요약: {item.get('summary', '')}"
+            f"[{index}] {item.get('category', '')} | {item.get('title', '')} | {item.get('summary', '')}"
         )
     return "\n\n".join(lines)
 
@@ -135,18 +132,21 @@ def _build_retrieval_prompt(keyword: str, public_results: list[dict[str, object]
         {
             "role": "system",
             "content": (
-                "You are a retrieval-only assistant for 부산 공공데이터. "
-                "Answer only using the provided context. "
-                "If the context does not contain enough evidence, reply exactly: 관련 내용이 없습니다. "
-                "Do not invent facts, do not mention unsupported details, and keep the answer concise in Korean."
+                "너는 LocalHub의 부산 공공데이터 챗봇이다. "
+                "사용자가 물어본 내용에 대해 제공된 문맥만 근거로 한국어로 자연스럽게 답한다. "
+                "말투는 친절하고 간결하게 유지하고, 실제 상담하듯 한두 문장으로 먼저 핵심을 말한다. "
+                "문맥에 근거가 부족하면 반드시 정확히 '관련 내용이 없습니다.'라고만 답한다. "
+                "추측, 과장, 출처 없는 정보는 절대 넣지 않는다. "
+                "목록을 나열해야 할 때만 짧은 불릿을 사용하고, 그 외에는 대화하듯 답한다."
             ),
         },
         {
             "role": "user",
             "content": (
-                f"질문: {keyword}\n\n"
-                f"문맥:\n{context}\n\n"
-                "위 문맥만 근거로 사용해서 답변해 주세요."
+                f"사용자 질문: {keyword}\n\n"
+                f"참고할 문맥:\n{context}\n\n"
+                "위 문맥만 사용해서, 사용자가 바로 이해할 수 있게 답변해 주세요. "
+                "가능하면 장소의 특징, 위치, 분위기, 방문 팁처럼 실제 도움이 되는 표현으로 자연스럽게 설명하세요."
             ),
         },
     ]
@@ -160,7 +160,6 @@ def _call_openai_chat(messages: list[dict[str, str]]) -> str:
         {
             "model": OPENAI_MODEL,
             "messages": messages,
-            "temperature": 0.2,
         }
     ).encode("utf-8")
 
@@ -196,6 +195,11 @@ def _call_openai_chat(messages: list[dict[str, str]]) -> str:
         return "\n".join(parts).strip()
 
     return str(content).strip()
+
+
+def _prefix_chat_answer(answer: str, is_ai_answer: bool) -> str:
+    prefix = "[AI응답]" if is_ai_answer else "[더미응답]"
+    return f"{prefix} {answer}" if answer else prefix
 
 
 @asynccontextmanager
@@ -402,26 +406,23 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db)):
     keyword = payload.message.strip()
     public_results = search_public_data(keyword, limit=5)
     if not public_results:
-        answer = (
+        answer = _prefix_chat_answer(
             f'"{keyword}"와 관련된 부산 공공데이터를 찾지 못했습니다. '
-            "데이터에 실제로 포함된 장소명·지역명·축제명으로 다시 질문해 보세요."
+            "데이터에 실제로 포함된 장소명·지역명·축제명으로 다시 질문해 보세요.",
+            False,
         )
     else:
         messages = _build_retrieval_prompt(keyword, public_results[:5])
-        answer = _call_openai_chat(messages)
+        llm_answer = _call_openai_chat(messages)
 
-        if not answer:
+        if llm_answer:
+            answer = _prefix_chat_answer(llm_answer, True)
+        else:
             public_lines = "\n".join(
                 f"- [{item['category']}] {item['title']}: {item['summary']}"
                 for item in public_results[:3]
             )
-            answer = f"부산 공공데이터 검색 결과\n{public_lines}"
-
-    if not answer:
-        answer = (
-            f'"{keyword}"와 관련된 부산 공공데이터를 찾지 못했습니다. '
-            "데이터에 실제로 포함된 장소명·지역명·축제명으로 다시 질문해 보세요."
-        )
+            answer = _prefix_chat_answer(f"부산 공공데이터 검색 결과\n{public_lines}", False)
 
     return ChatResponse(
         answer=answer,
