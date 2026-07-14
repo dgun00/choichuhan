@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LocalHub - 공공데이터 기반 지역 정보 공유 커뮤니티</title>
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <script>
+    // Tailwind 커스텀 색상 (세룰리안 블루 계열) 및 글래스모피즘 유틸리티
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cerulean: {
+              50: '#f0f8ff',
+              100: '#e0f0fe',
+              300: '#7dd3fc',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0f4c81', // 메인 세룰리안 블루 포인트
+              800: '#075985',
+              900: '#0c4a6e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 글래스모피즘 및 부드러운 스크롤 커스텀 */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 0 8px 32px 0 rgba(15, 76, 129, 0.1);
+    }
+    .glass-modal {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+    .glass-nav {
+      background: rgba(15, 76, 129, 0.85);
+      backdrop-filter: blur(12px);
+    }
+    body {
+      background: linear-gradient(135deg, #f0f8ff 0%, #e0f0fe 50%, #f0f8ff 100%);
+      min-height: 100vh;
+      color: #1e293b;
+    }
+  </style>
+</head>
+<body class="relative overflow-x-hidden">
+  <!-- 배경 꾸미기용 은은한 블루 구체 (글래스모피즘 효과 극대화) -->
+  <div class="fixed top-[-10%] left-[-10%] w-96 h-96 bg-cerulean-300/30 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="fixed bottom-[10%] right-[-5%] w-[30rem] h-[30rem] bg-blue-400/20 rounded-full blur-3xl pointer-events-none"></div>
+
+  <div id="app" class="relative z-10 max-w-5xl mx-auto px-4 py-6">
+    <!-- 헤더 네비게이션 -->
+    <header class="glass-nav text-white rounded-2xl px-6 py-4 mb-8 flex justify-between items-center shadow-lg">
+      <div class="flex items-center space-x-2 cursor-pointer" @click="currentTab = 'home'">
+        <span class="text-2xl">🐳</span>
+        <h1 class="text-xl font-bold tracking-wider">LocalHub <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full ml-1">BUSAN</span></h1>
+      </div>
+      <nav class="flex space-x-2 text-sm font-medium">
+        <button @click="currentTab = 'home'" :class="currentTab === 'home' ? 'bg-white text-cerulean-700 shadow' : 'hover:bg-white/10'" class="px-4 py-2 rounded-xl transition">📊 대시보드</button>
+        <button @click="currentTab = 'board'" :class="currentTab === 'board' ? 'bg-white text-cerulean-700 shadow' : 'hover:bg-white/10'" class="px-4 py-2 rounded-xl transition">💬 익명 게시판</button>
+      </nav>
+    </header>
+
+    <!-- TAB 1: 대시보드 (Chart.js 톤온톤 통계 & 메인 배너) -->
+    <div v-show="currentTab === 'home'" class="space-y-6 animate-fade-in">
+      <!-- 권역 소개 글래스 배너 -->
+      <div class="glass-card rounded-3xl p-8 relative overflow-hidden">
+        <div class="max-w-xl">
+          <span class="bg-cerulean-100 text-cerulean-800 text-xs font-bold px-3 py-1 rounded-full border border-cerulean-300">✨ 공공데이터 100% 연동</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-cerulean-900 mt-3 leading-tight">부산 권역 실시간 지역 정보 & 익명 커뮤니티</h2>
+          <p class="text-slate-600 text-sm mt-2">로그인 없이 자유롭게 맛집, 관광지, 축제 정보를 나누고 AI 챗봇에게 무엇이든 물어보세요!</p>
+        </div>
+      </div>
+
+      <!-- 통계 차트 그리드 (Should-Have 1순위) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="glass-card p-6 rounded-2xl">
+          <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">📈</span> 카테고리별 게시글 현황 (톤온톤)</h3>
+          <div class="h-64 flex justify-center items-center">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+        <div class="glass-card p-6 rounded-2xl">
+          <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">🔥</span> 실시간 인기 게시글 TOP 5</h3>
+          <div class="space-y-3">
+            <div v-for="(post, index) in topPosts" :key="post.id" @click="openDetail(post)" class="flex items-center justify-between p-3 rounded-xl bg-white/50 hover:bg-white/80 transition cursor-pointer border border-white">
+              <div class="flex items-center space-x-3 truncate">
+                <span class="w-6 h-6 rounded-full bg-cerulean-100 text-cerulean-700 font-bold text-xs flex items-center justify-center">{{ index + 1 }}</span>
+                <span class="text-sm font-medium text-slate-700 truncate">{{ post.title }}</span>
+              </div>
+              <div class="flex items-center space-x-2 text-xs text-slate-500 shrink-0 ml-2">
+                <span>❤️ {{ post.likes }}</span>
+                <span>👁️ {{ post.views }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: 익명 커뮤니티 게시판 (Must-Have CRUD) -->
+    <div v-show="currentTab === 'board'" class="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-cerulean-900 flex items-center"><span class="mr-2">💬</span> 부산 권역 자유 커뮤니티</h2>
+          <p class="text-xs text-slate-500 mt-1">※ 회원가입 없이 평문 비밀번호로 게시글을 관리합니다. (의도된 교육용 설계)</p>
+        </div>
+        <button @click="showWriteModal = true" class="bg-cerulean-700 hover:bg-cerulean-800 text-white font-medium px-5 py-2.5 rounded-xl shadow-md transition flex items-center text-sm shrink-0">
+          <span class="mr-1">✏️</span> 새 글 작성
+        </button>
+      </div>
+
+      <!-- 카테고리 필터 & 검색바 -->
+      <div class="flex flex-col sm:flex-row justify-between gap-3 bg-white/40 p-3 rounded-2xl border border-white">
+        <div class="flex flex-wrap gap-1.5">
+          <button v-for="cat in categories" :key="cat" @click="selectedCategory = cat" :class="selectedCategory === cat ? 'bg-cerulean-700 text-white font-bold' : 'bg-white/80 text-slate-600 hover:bg-white'" class="px-3 py-1.5 rounded-lg text-xs transition shadow-sm">
+            {{ getCategoryIcon(cat) }} {{ cat }}
+          </button>
+        </div>
+        <div class="relative min-w-[220px]">
+          <input v-model="searchKeyword" type="text" placeholder="🔍 제목, 내용 검색..." class="w-full bg-white/90 border border-slate-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-cerulean-500">
+        </div>
+      </div>
+
+      <!-- 게시글 목록 테이블 -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-slate-200/80 text-slate-400 text-xs uppercase">
+              <th class="py-3 px-2 font-medium w-16">번호</th>
+              <th class="py-3 px-2 font-medium w-24">분류</th>
+              <th class="py-3 px-2 font-medium">제목</th>
+              <th class="py-3 px-2 font-medium w-20 text-center">조회</th>
+              <th class="py-3 px-2 font-medium w-20 text-center">좋아요</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-sm">
+            <tr v-for="post in filteredPosts" :key="post.id" @click="openDetail(post)" class="hover:bg-white/60 transition cursor-pointer">
+              <td class="py-3 px-2 text-slate-400 text-xs">{{ post.id }}</td>
+              <td class="py-3 px-2"><span class="bg-cerulean-50 text-cerulean-700 text-[11px] font-semibold px-2 py-0.5 rounded-md border border-cerulean-100">{{ getCategoryIcon(post.category) }} {{ post.category }}</span></td>
+              <td class="py-3 px-2 font-medium text-slate-700 hover:text-cerulean-700 transition">{{ post.title }}</td>
+              <td class="py-3 px-2 text-center text-xs text-slate-500">{{ post.views }}</td>
+              <td class="py-3 px-2 text-center text-xs text-pink-500 font-semibold">❤️ {{ post.likes }}</td>
+            </tr>
+            <tr v-if="filteredPosts.length === 0">
+              <td colspan="5" class="py-12 text-center text-slate-400 text-sm">등록된 게시글이 없습니다. 첫 글의 주인공이 되어보세요! ✨</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 모달 1: 게시글 작성 창 (글래스모피즘) -->
+    <div v-if="showWriteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+      <div class="glass-modal w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-white space-y-4">
+        <h3 class="text-lg font-bold text-cerulean-900 flex items-center">✨ 익명 게시글 작성</h3>
+        <div class="space-y-3 text-sm">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">카테고리</label>
+            <select v-model="newPost.category" class="w-full bg-white/90 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-cerulean-500 outline-none">
+              <option v-for="cat in categories.slice(1)" :key="cat" :value="cat">{{ getCategoryIcon(cat) }} {{ cat }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">제목</label>
+            <input v-model="newPost.title" type="text" placeholder="제목을 입력하세요" class="w-full bg-white/90 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-cerulean-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">내용</label>
+            <textarea v-model="newPost.content" rows="4" placeholder="자유롭게 지역 정보를 나누어 보세요!" class="w-full bg-white/90 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-cerulean-500 outline-none"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 text-rose-600">수정/삭제용 비밀번호 (평문 저장)</label>
+            <input v-model="newPost.password" type="password" placeholder="숫자 4자리 등 기억할 비밀번호" class="w-full bg-white/90 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-cerulean-500 outline-none">
+          </div>
+        </div>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button @click="showWriteModal = false" class="px-4 py-2 rounded-xl bg-slate-200/80 text-slate-600 font-medium text-xs hover:bg-slate-300 transition">취소</button>
+          <button @click="submitPost" class="px-5 py-2 rounded-xl bg-cerulean-700 text-white font-medium text-xs hover:bg-cerulean-800 transition shadow">등록하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 모달 2: 게시글 상세 & 비밀번호 확인 창 -->
+    <div v-if="selectedPost" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div class="glass-modal w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-white space-y-4">
+        <div class="flex justify-between items-start">
+          <span class="bg-cerulean-100 text-cerulean-800 text-xs font-semibold px-2.5 py-1 rounded-md">{{ getCategoryIcon(selectedPost.category) }} {{ selectedPost.category }}</span>
+          <button @click="selectedPost = null; pwdMode = null" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+        </div>
+        <h3 class="text-xl font-bold text-slate-800">{{ selectedPost.title }}</h3>
+        <p class="text-sm text-slate-600 min-h-[5rem] bg-white/60 p-4 rounded-2xl whitespace-pre-wrap border border-white">{{ selectedPost.content }}</p>
+        
+        <div class="flex justify-between items-center text-xs text-slate-400 pt-2 border-t border-slate-200/60">
+          <span>👁️ 조회수 {{ selectedPost.views }}</span>
+          <button @click="likePost(selectedPost)" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold transition flex items-center space-x-1">
+            <span>❤️ 좋아요 {{ selectedPost.likes }}</span>
+          </button>
+        </div>
+
+        <!-- 수정/삭제 모드 선택 -->
+        <div v-if="!pwdMode" class="flex justify-end space-x-2 pt-2">
+          <button @click="pwdMode = 'edit'" class="px-3 py-1.5 bg-slate-200/80 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-medium transition">✏️ 수정</button>
+          <button @click="pwdMode = 'delete'" class="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-medium transition">🗑️ 삭제</button>
+        </div>
+
+        <!-- 평문 비밀번호 확인 입력 폼 -->
+        <div v-else class="bg-cerulean-50/80 p-3 rounded-2xl border border-cerulean-200 space-y-2">
+          <p class="text-xs font-bold text-cerulean-900">🔒 {{ pwdMode === 'edit' ? '수정' : '삭제' }} 권한 확인 (등록한 비밀번호 입력)</p>
+          <div class="flex space-x-2">
+            <input v-model="inputPwd" type="password" placeholder="비밀번호 입력" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs outline-none">
+            <button @click="verifyPassword" class="px-4 py-1.5 bg-cerulean-700 text-white rounded-xl text-xs font-bold shadow hover:bg-cerulean-800">확인</button>
+            <button @click="pwdMode = null; inputPwd = ''" class="px-3 py-1.5 bg-slate-300 text-slate-700 rounded-xl text-xs">취소</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 플로팅 챗봇 위젯 (OpenAI 연동 API 프로토타입) -->
+    <div class="fixed bottom-6 right-6 z-40">
+      <button v-if="!showChat" @click="showChat = true" class="w-14 h-14 bg-cerulean-700 hover:bg-cerulean-800 text-white rounded-full shadow-2xl flex items-center justify-center text-2xl transition transform hover:scale-110 border-2 border-white/40">
+        💬
+      </button>
+
+      <div v-else class="glass-modal w-80 sm:w-96 h-[28rem] rounded-3xl shadow-2xl border border-white flex flex-col overflow-hidden animate-fade-in">
+        <div class="bg-cerulean-700 text-white px-4 py-3 flex justify-between items-center">
+          <div class="flex items-center space-x-2">
+            <span class="text-xl">🤖</span>
+            <div>
+              <h4 class="font-bold text-xs">LocalHub AI 챗봇</h4>
+              <p class="text-[10px] text-cerulean-200">부산 권역 공공데이터 기반 답변</p>
+            </div>
+          </div>
+          <button @click="showChat = false" class="text-white/80 hover:text-white font-bold">✕</button>
+        </div>
+
+        <div class="flex-1 p-3 overflow-y-auto space-y-3 text-xs">
+          <div v-for="(msg, index) in chatHistory" :key="index" :class="msg.role === 'user' ? 'text-right' : 'text-left'">
+            <span :class="msg.role === 'user' ? 'bg-cerulean-700 text-white rounded-br-none' : 'bg-white/80 text-slate-700 border border-white rounded-bl-none shadow-sm'" class="inline-block px-3 py-2 rounded-2xl max-w-[80%] whitespace-pre-wrap text-left">
+              {{ msg.content }}
+            </span>
+          </div>
+        </div>
+
+        <div class="p-2 bg-white/60 border-t border-white/80 flex space-x-1">
+          <input v-model="chatInput" @keyup.enter="sendChatMessage" type="text" placeholder="이번 주말 부산 축제 알려줘!" class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-cerulean-500">
+          <button @click="sendChatMessage" class="bg-cerulean-700 hover:bg-cerulean-800 text-white px-3 py-2 rounded-xl text-xs font-bold transition">전송</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Vue 3 및 Chart.js 구동 스크립트 -->
+  <script>
+    const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+    createApp({
+      setup() {
+        const currentTab = ref('home');
+        const showWriteModal = ref(false);
+        const selectedPost = ref(null);
+        const pwdMode = ref(null);
+        const inputPwd = ref('');
+        const searchKeyword = ref('');
+        const selectedCategory = ref('전체');
+
+        const categories = ['전체', '관광지', '맛집', '축제·행사', '자유'];
+
+        // 카테고리별 이모지 매핑 (귀여운 포인트)
+        const getCategoryIcon = (cat) => {
+          switch(cat) {
+            case '관광지': return '🏝️';
+            case '맛집': return '🍲';
+            case '축제·행사': return '🎪';
+            case '자유': return '💬';
+            default: return '🌈';
+          }
+        };
+
+        // 🚨 [FE 더미 데이터 영역] : BE 개발자가 API를 완료하면 axios.get('/api/posts')로 교체!
+        const posts = ref([
+          { id: 7, category: '맛집', title: '부산 광안리 국밥 찐맛집 추천합니다', content: '공공데이터에 등록된 ㅇㅇ국밥 가봤는데 국물이 진짜 진하고 고기 양이 엄청나네요. 주차장도 넓어서 광안리 드라이브 가실 때 강추합니다!', password: '1234', views: 42, likes: 15 },
+          { id: 6, category: '축제·행사', title: ' 이번 주말 광안리 어방축제 일정 공유', content: '공공데이터 축제 캘린더 보니까 이번 주 토요일 저녁에 드론쇼랑 불꽃놀이 같이 한다고 합니다. 꿀팁 자리 공유해요!', password: '1234', views: 88, likes: 32 },
+          { id: 5, category: '관광지', title: '해운대 블루라인파크 캡슐 열차 예약 팁', content: '현장 예매는 주말에 절대 불가입니다. 최소 2주 전에 공식 홈페이지 열릴 때 바로 잡으셔야 노을 지는 시간대 탑승 가능해요.', password: '1111', views: 65, likes: 19 },
+          { id: 4, category: '자유', title: '영도 카페거리 주차하기 편한 곳 어디인가요?', content: '초보 운전인데 영도 오르막길이 좀 무서워서요. 평지 쪽에 주차장 넓은 대형 카페 추천 부탁드립니다~', password: '0000', views: 24, likes: 4 },
+          { id: 3, category: '맛집', title: '남포동 이재모피자 웨이팅 실시간 상황', content: '화요일 오후 2시 기준 웨이팅 40팀 있습니다. 포장 주문은 키오스크로 바로 가능하니 참고하세요!', password: '1234', views: 112, likes: 28 },
+          { id: 2, category: '관광지', title: '송도 해상케이블카 바닥 투명한 크리스탈 후기', content: '바닥이 아예 유리로 뚫려 있어서 바다 내려다보는 맛이 있습니다. 고소공포증 있으시면 일반 캐빈 타세요ㅎㅎ', password: '1234', views: 53, likes: 11 },
+          { id: 1, category: '자유', title: 'LocalHub 부산 커뮤니티 오픈 축하합니다 🥳', content: '로그인 없이 바로 글 쓸 수 있어서 너무 편하네요! 앞으로 좋은 지역 정보 많이 나누었으면 좋겠습니다.', password: '1234', views: 95, likes: 45 },
+        ]);
+
+        const newPost = ref({ category: '맛집', title: '', content: '', password: '' });
+
+        // 실시간 검색 및 카테고리 필터링
+        const filteredPosts = computed(() => {
+          return posts.value.filter(p => {
+            const matchCat = selectedCategory.value === '전체' || p.category === selectedCategory.value;
+            const matchKey = p.title.includes(searchKeyword.value) || p.content.includes(searchKeyword.value);
+            return matchCat && matchKey;
+          });
+        });
+
+        const topPosts = computed(() => {
+          return [...posts.value].sort((a, b) => b.likes - a.likes).slice(0, 5);
+        });
+
+        // 🚨 [BE 연동 구역] 게시글 작성 API 호출로 변경
+        const submitPost = () => {
+          if (!newPost.value.title || !newPost.value.content || !newPost.value.password) {
+            alert('제목, 내용, 수정용 비밀번호를 모두 입력해 주세요!');
+            return;
+          }
+          const newId = posts.value.length > 0 ? Math.max(...posts.value.map(p => p.id)) + 1 : 1;
+          posts.value.unshift({ id: newId, ...newPost.value, views: 0, likes: 0 });
+          newPost.value = { category: '맛집', title: '', content: '', password: '' };
+          showWriteModal.value = false;
+          updateChart(); // 대시보드 차트 동기화
+        };
+
+        const openDetail = (post) => {
+          post.views++; // 🚨 [BE 연동 구역] axios.get(`/api/posts/${post.id}`) 호출 시 백엔드에서 조회수 증가
+          selectedPost.value = post;
+          pwdMode.value = null;
+          inputPwd.value = '';
+        };
+
+        const likePost = (post) => {
+          post.likes++; // 🚨 [BE 연동 구역] axios.post(`/api/posts/${post.id}/like`) 로 갈아끼우기
+        };
+
+        // 평문 비밀번호 검증 (의도된 RFP 교육 목적 설계)
+        const verifyPassword = () => {
+          if (inputPwd.value === selectedPost.value.password) {
+            if (pwdMode.value === 'delete') {
+              posts.value = posts.value.filter(p => p.id !== selectedPost.value.id);
+              selectedPost.value = null;
+              updateChart();
+            } else if (pwdMode.value === 'edit') {
+              const newTitle = prompt('수정할 제목:', selectedPost.value.title);
+              const newContent = prompt('수정할 내용:', selectedPost.value.content);
+              if (newTitle && newContent) {
+                selectedPost.value.title = newTitle;
+                selectedPost.value.content = newContent;
+              }
+              pwdMode.value = null;
+            }
+          } else {
+            alert('🚨 비밀번호가 일치하지 않습니다! (평문 비교 일치 필요)');
+          }
+          inputPwd.value = '';
+        };
+
+        // 🚨 [챗봇 AI 연동 구역] 브라우저 메모리에 대화 보관 후 POST /api/chat 호출
+        const showChat = ref(false);
+        const chatInput = ref('');
+        const chatHistory = ref([
+          { role: 'assistant', content: '안녕하세요! 부산 권역 정보 커뮤니티 LocalHub AI입니다. 축제, 맛집, 관광지 무엇이든 물어보세요! 🐬' }
+        ]);
+
+        const sendChatMessage = () => {
+          if (!chatInput.value.trim()) return;
+          const userMsg = chatInput.value;
+          chatHistory.value.push({ role: 'user', content: userMsg });
+          chatInput.value = '';
+
+          // BE 연동 전 더미 AI 응답 (1초 뒤 답변)
+          setTimeout(() => {
+            chatHistory.value.push({
+              role: 'assistant',
+              content: `[AI 챗봇 더미 응답] "${userMsg}"에 대한 부산 공공데이터 조회 결과입니다. 이번 주말 광안리나 해운대 인근 모범음식점 방문을 추천드립니다!`
+            });
+          }, 800);
+        };
+
+        // Chart.js 톤온톤(Tone-on-Tone) 시각화 초기화
+        let chartInstance = null;
+        const updateChart = () => {
+          if (!chartInstance) return;
+          const counts = [
+            posts.value.filter(p => p.category === '관광지').length,
+            posts.value.filter(p => p.category === '맛집').length,
+            posts.value.filter(p => p.category === '축제·행사').length,
+            posts.value.filter(p => p.category === '자유').length,
+          ];
+          chartInstance.data.datasets[0].data = counts;
+          chartInstance.update();
+        };
+
+        onMounted(() => {
+          nextTick(() => {
+            const ctx = document.getElementById('categoryChart')?.getContext('2d');
+            if (ctx) {
+              chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                  labels: ['🏝️ 관광지', '🍲 맛집', '🎪 축제·행사', '💬 자유'],
+                  datasets: [{
+                    data: [2, 3, 1, 1],
+                    // 요청하신 세룰리안 블루 계열 톤온톤 컬러 적용 (혼잡하지 않음)
+                    backgroundColor: ['#0f4c81', '#0284c7', '#38bdf8', '#bae6fd'],
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { position: 'right', labels: { font: { family: 'sans-serif', size: 11 } } } },
+                  cutout: '65%'
+                }
+              });
+              updateChart();
+            }
+          });
+        });
+
+        return {
+          currentTab, showWriteModal, selectedPost, pwdMode, inputPwd, searchKeyword,
+          selectedCategory, categories, getCategoryIcon, posts, newPost, filteredPosts,
+          topPosts, submitPost, openDetail, likePost, verifyPassword,
+          showChat, chatInput, chatHistory, sendChatMessage
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
