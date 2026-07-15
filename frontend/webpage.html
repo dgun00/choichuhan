@@ -12,6 +12,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- D3.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <!-- FullCalendar CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
   <!-- LocalHub API 설정 -->
   <script src="./config.js"></script>
   
@@ -108,6 +110,22 @@
         <div class="glass-card p-6 rounded-2xl">
           <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">🏆</span> 인기 지역 통계</h3>
           <div id="regionStatsChart" class="h-64 w-full"></div>
+        </div>
+      </div>
+
+      <!-- 축제 캘린더 (FullCalendar) -->
+      <div class="glass-card p-6 rounded-2xl relative">
+        <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">📅</span> 부산 축제·행사 캘린더</h3>
+        <div id="festivalCalendar" class="bg-white/70 rounded-2xl p-3 border border-white"></div>
+
+        <!-- 일정에 마우스 올리면 뜨는 간이 정보 카드 -->
+        <div v-if="hoveredEvent" class="absolute z-50 w-64 bg-white rounded-2xl shadow-2xl border border-cerulean-100 p-3 text-xs space-y-1.5 pointer-events-none animate-fade-in"
+             :style="{ left: hoveredEvent.x + 'px', top: hoveredEvent.y + 'px' }">
+          <img v-if="hoveredEvent.image" :src="hoveredEvent.image" class="w-full h-28 object-cover rounded-xl mb-1">
+          <p class="font-bold text-slate-800 leading-snug">{{ hoveredEvent.title }}</p>
+          <p class="text-slate-500">📍 {{ hoveredEvent.place || '장소 정보 없음' }}</p>
+          <p class="text-slate-500">🕐 {{ hoveredEvent.playtime || '운영시간 정보 없음' }}</p>
+          <p class="text-slate-500">💰 {{ hoveredEvent.fee || '요금 정보 없음' }}</p>
         </div>
       </div>
 
@@ -294,6 +312,60 @@
       </div>
     </div>
 
+    <!-- 모달: 축제·행사 상세 정보 -->
+    <div v-if="selectedFestival" @click.self="closeFestivalDetail" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+      <div @click.stop class="glass-modal w-full max-w-2xl rounded-3xl p-6 shadow-2xl border border-white space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-start">
+          <span class="bg-cerulean-100 text-cerulean-800 text-xs font-semibold px-2.5 py-1 rounded-md">🎪 축제·행사</span>
+          <button @click="closeFestivalDetail" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+        </div>
+
+        <h3 class="text-xl font-bold text-slate-800">{{ selectedFestival.title }}</h3>
+
+        <!-- 대표 이미지 (클릭하면 풀사이즈로 보기) -->
+        <div v-if="selectedFestival.image" class="relative">
+          <img :src="selectedFestival.image" @click="openFullImage(selectedFestival.image)" class="w-full h-56 object-cover rounded-2xl border border-white cursor-zoom-in hover:opacity-90 transition">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-slate-600 bg-white/60 p-4 rounded-2xl border border-white">
+          <p><span class="font-semibold text-slate-700">📅 기간</span> {{ selectedFestival.date_start }} ~ {{ selectedFestival.date_end }}</p>
+          <p v-if="selectedFestival.place"><span class="font-semibold text-slate-700">📍 장소</span> {{ selectedFestival.place }}</p>
+          <p v-if="selectedFestival.address"><span class="font-semibold text-slate-700">🏠 주소</span> {{ selectedFestival.address }}</p>
+          <p v-if="selectedFestival.playtime"><span class="font-semibold text-slate-700">🕐 운영시간</span> {{ selectedFestival.playtime }}</p>
+          <p v-if="selectedFestival.fee"><span class="font-semibold text-slate-700">💰 요금</span> {{ selectedFestival.fee }}</p>
+          <p v-if="selectedFestival.tel"><span class="font-semibold text-slate-700">📞 전화</span> {{ selectedFestival.tel }}</p>
+          <p v-if="selectedFestival.agelimit"><span class="font-semibold text-slate-700">🔞 관람연령</span> {{ selectedFestival.agelimit }}</p>
+          <p v-if="selectedFestival.festivalgrade"><span class="font-semibold text-slate-700">🏅 축제등급</span> {{ selectedFestival.festivalgrade }}</p>
+          <p v-if="selectedFestival.spendtimefestival"><span class="font-semibold text-slate-700">⏱️ 관람소요시간</span> {{ selectedFestival.spendtimefestival }}</p>
+          <p v-if="selectedFestival.bookingplace"><span class="font-semibold text-slate-700">🎫 예매처</span> {{ selectedFestival.bookingplace }}</p>
+          <p v-if="selectedFestival.discountinfofestival"><span class="font-semibold text-slate-700">🏷️ 할인정보</span> {{ selectedFestival.discountinfofestival }}</p>
+          <p v-if="selectedFestival.placeinfo"><span class="font-semibold text-slate-700">🗺️ 위치안내</span> {{ selectedFestival.placeinfo }}</p>
+          <p v-if="selectedFestival.sponsor1"><span class="font-semibold text-slate-700">🏢 주최</span> {{ selectedFestival.sponsor1 }} <span v-if="selectedFestival.sponsor1tel">({{ selectedFestival.sponsor1tel }})</span></p>
+          <p v-if="selectedFestival.sponsor2"><span class="font-semibold text-slate-700">🤝 주관</span> {{ selectedFestival.sponsor2 }} <span v-if="selectedFestival.sponsor2tel">({{ selectedFestival.sponsor2tel }})</span></p>
+          <p v-if="selectedFestival.eventhomepage" class="sm:col-span-2 break-all">
+            <span class="font-semibold text-slate-700">🔗 홈페이지</span>
+            <a :href="selectedFestival.eventhomepage" target="_blank" rel="noopener noreferrer" class="text-cerulean-700 hover:underline">{{ selectedFestival.eventhomepage }}</a>
+          </p>
+        </div>
+
+        <div v-if="selectedFestival.subevent" class="bg-white/60 p-4 rounded-2xl border border-white">
+          <p class="font-semibold text-slate-700 text-sm mb-1">➕ 부대행사</p>
+          <p class="text-sm text-slate-600 whitespace-pre-wrap">{{ selectedFestival.subevent }}</p>
+        </div>
+
+        <div v-if="selectedFestival.program" class="bg-white/60 p-4 rounded-2xl border border-white">
+          <p class="font-semibold text-slate-700 text-sm mb-1">📋 프로그램</p>
+          <p class="text-sm text-slate-600 whitespace-pre-wrap">{{ selectedFestival.program }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 라이트박스: 축제 이미지 풀사이즈 보기 -->
+    <div v-if="fullImageUrl" @click="closeFullImage" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 cursor-zoom-out animate-fade-in">
+      <img :src="fullImageUrl" class="max-w-full max-h-full rounded-2xl shadow-2xl">
+      <button @click="closeFullImage" class="absolute top-4 right-4 text-white/80 hover:text-white text-2xl font-bold">✕</button>
+    </div>
+
     <!-- 모달 1: 게시글 작성 창 (글래스모피즘) -->
     <div v-if="showWriteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
       <div class="glass-modal w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-white space-y-4">
@@ -466,9 +538,27 @@
         const selectedCategory = ref('전체');
         const showEditModal = ref(false);
         const editPost = ref({ id: null, category: '맛집', title: '', content: '', password: '' });
+        const hoveredEvent = ref(null);
+        const selectedFestival = ref(null);
+        const fullImageUrl = ref(null);
+
+        const closeFestivalDetail = () => {
+          selectedFestival.value = null;
+        };
+
+        const openFullImage = (url) => {
+          if (url) fullImageUrl.value = url;
+        };
+
+        const closeFullImage = () => {
+          fullImageUrl.value = null;
+        };
 
         watch(currentTab, (tab) => {
           localStorage.setItem(ACTIVE_TAB_KEY, tab);
+          if (tab === 'home' && !calendarInstance) {
+            initCalendar();
+          }
         });
 
         const categories = ['전체', '관광지', '맛집', '축제·행사', '레포츠', '문화시설', '쇼핑', '숙박', '여행코스', '자유'];
@@ -564,6 +654,7 @@
             .slice(0, 6);
         };
 
+        let calendarInstance = null;
         const updateChart = () => {
           if (categoryChartInstance) {
             const counts = [
@@ -776,6 +867,114 @@
             posts.value = [...fallbackPosts];
           }
           updateChart();
+        };
+
+        // 축제마다 다른 색이 보이도록 고정 팔레트에서 id 기반으로 하나씩 배정
+        const CALENDAR_COLORS = [
+          '#0f4c81', '#0ea5e9', '#f97316', '#16a34a', '#a855f7',
+          '#e11d48', '#0d9488', '#ca8a04', '#6366f1', '#db2777',
+        ];
+
+        const colorForEvent = (key) => {
+          let hash = 0;
+          for (let i = 0; i < key.length; i++) {
+            hash = (hash * 31 + key.charCodeAt(i)) % CALENDAR_COLORS.length;
+          }
+          return CALENDAR_COLORS[Math.abs(hash) % CALENDAR_COLORS.length];
+        };
+
+        const initCalendar = async () => {
+          await nextTick();
+          const calendarEl = document.getElementById('festivalCalendar');
+          if (!calendarEl || calendarInstance) return;
+
+          let events = [];
+          try {
+            const response = await fetch(`${API_BASE}/api/public-data/festivals`);
+            if (response.ok) {
+              const data = await response.json();
+              events = data.map(event => ({
+                id: event.id,
+                title: event.title,
+                start: event.start,
+                end: event.end,
+                color: colorForEvent(String(event.id || event.title)),
+                extendedProps: { ...event },
+              }));
+            }
+          } catch (error) {
+            console.error(error);
+          }
+
+          // FullCalendar 콜백의 jsEvent 좌표가 부정확할 때가 있어서, 문서 전체 기준으로
+          // 실제 커서 위치를 항상 최신으로 따로 추적합니다 (캘린더 진입 전부터 추적해야
+          // 처음 호버하는 순간에도 좌표가 비어있지 않습니다).
+          let lastMouseX = 0;
+          let lastMouseY = 0;
+          document.addEventListener('mousemove', (jsEvent) => {
+            lastMouseX = jsEvent.clientX;
+            lastMouseY = jsEvent.clientY;
+            if (hoveredEvent.value) {
+              positionTooltip(lastMouseX, lastMouseY);
+            }
+          });
+
+          // 카드가 .glass-card(backdrop-filter가 있어 fixed 자식의 기준점이 되는 컨테이너) 안에서
+          // absolute로 배치되므로, 좌표를 이 컨테이너 기준 상대 좌표로 변환합니다.
+          const containerEl = calendarEl.parentElement;
+
+          function positionTooltip(clientX, clientY) {
+            if (!hoveredEvent.value) return;
+            const containerRect = containerEl.getBoundingClientRect();
+            const offset = 6;
+            const tooltipWidth = 272;
+            const tooltipHeight = 260;
+
+            let x = clientX - containerRect.left + offset;
+            let y = clientY - containerRect.top + offset;
+
+            if (x + tooltipWidth > containerRect.width) {
+              x = clientX - containerRect.left - tooltipWidth - offset;
+            }
+            if (y + tooltipHeight > containerRect.height) {
+              y = clientY - containerRect.top - tooltipHeight - offset;
+            }
+
+            hoveredEvent.value.x = Math.max(8, x);
+            hoveredEvent.value.y = Math.max(8, y);
+          }
+
+          calendarInstance = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'ko',
+            height: 'auto',
+            events,
+            eventMouseEnter: (info) => {
+              const props = info.event.extendedProps;
+              // FullCalendar가 넘겨주는 jsEvent 좌표가 실제 커서 위치와 어긋나는 경우가 있어,
+              // mousemove로 직접 추적한 좌표를 우선 사용합니다.
+              const clientX = lastMouseX || info.jsEvent?.clientX || 0;
+              const clientY = lastMouseY || info.jsEvent?.clientY || 0;
+              hoveredEvent.value = {
+                title: info.event.title,
+                place: props.place,
+                fee: props.fee,
+                playtime: props.playtime,
+                image: props.image || '',
+                x: 0,
+                y: 0,
+              };
+              positionTooltip(clientX, clientY);
+            },
+            eventMouseLeave: () => {
+              hoveredEvent.value = null;
+            },
+            eventClick: (info) => {
+              hoveredEvent.value = null;
+              selectedFestival.value = { title: info.event.title, ...info.event.extendedProps };
+            },
+          });
+          calendarInstance.render();
         };
 
         // 실시간 검색 및 카테고리 필터링
@@ -1053,6 +1252,10 @@
 
           window.addEventListener('resize', renderD3RegionStats);
           await Promise.all([loadPosts(), loadWeatherRegions()]);
+
+          if (currentTab.value === 'home') {
+            initCalendar();
+          }
         });
 
         return {
@@ -1061,6 +1264,7 @@
           topPosts, submitPost, submitEditPost, openDetail, likePost, verifyPassword, closeDetail, closeEditModal,
           comments, newComment, submitComment, deleteComment, formatDate, getSuitabilityBadgeClass,
           weatherRegions, weatherLoading, selectedWeatherRegion, openWeatherDetail, closeWeatherDetail,
+          hoveredEvent, selectedFestival, closeFestivalDetail, fullImageUrl, openFullImage, closeFullImage,
           showChat, chatInput, chatHistory, sendChatMessage, isChatLoading, chatScrollRef
         };
       }

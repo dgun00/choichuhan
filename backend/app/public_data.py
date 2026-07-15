@@ -605,3 +605,74 @@ def preview_file(relative_path: str, limit: int = 30) -> dict[str, Any]:
         "total": len(records),
         "items": records[:limit],
     }
+
+
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _strip_html_tags(value: str) -> str:
+    return _HTML_TAG_RE.sub("", value).strip()
+
+
+def get_festival_events() -> list[dict[str, Any]]:
+    """FullCalendar에 바로 넣을 수 있는 형태로 축제·행사 일정을 반환합니다."""
+    events: list[dict[str, Any]] = []
+
+    for path in list_json_files():
+        if infer_category(path.name) != "축제·행사":
+            continue
+
+        try:
+            records = extract_records(load_file(path))
+        except Exception:
+            continue
+
+        for record in records:
+            start = _parse_event_date(record.get("eventstartdate"))
+            if not start:
+                continue
+
+            end = _parse_event_date(record.get("eventenddate")) or start
+
+            def _field(key: str) -> str:
+                return str(record.get(key) or "").strip()
+
+            title = _pick_value(record, TITLE_KEYS) or "축제·행사"
+            title = " ".join(title.split())[:120]
+            address = _pick_value(record, ADDRESS_KEYS)
+            place = _field("eventplace") or address
+
+            events.append(
+                {
+                    "id": str(record.get("contentid") or f"{path.stem}-{len(events)}"),
+                    "title": title,
+                    # FullCalendar의 종일 이벤트 end는 배타적(exclusive)이라 하루를 더해줍니다.
+                    "start": start.isoformat(),
+                    "end": (end + timedelta(days=1)).isoformat(),
+                    # 상세 모달 표시용 (exclusive 보정 없는 실제 날짜)
+                    "date_start": start.isoformat(),
+                    "date_end": end.isoformat(),
+                    "place": place,
+                    "address": address,
+                    "fee": _field("usetimefestival"),
+                    "playtime": _field("playtime"),
+                    "image": _field("firstimage"),
+                    "tel": _field("tel"),
+                    "program": _field("program"),
+                    "subevent": _field("subevent"),
+                    "sponsor1": _field("sponsor1"),
+                    "sponsor1tel": _field("sponsor1tel"),
+                    "sponsor2": _field("sponsor2"),
+                    "sponsor2tel": _field("sponsor2tel"),
+                    "eventhomepage": _strip_html_tags(_field("eventhomepage")),
+                    "bookingplace": _field("bookingplace"),
+                    "agelimit": _field("agelimit"),
+                    "festivalgrade": _field("festivalgrade"),
+                    "placeinfo": _field("placeinfo"),
+                    "spendtimefestival": _field("spendtimefestival"),
+                    "discountinfofestival": _field("discountinfofestival"),
+                }
+            )
+
+    events.sort(key=lambda event: event["start"])
+    return events
