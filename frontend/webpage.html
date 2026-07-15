@@ -99,7 +99,7 @@
         <div class="glass-card p-6 rounded-2xl">
           <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">🔥</span> 실시간 인기 게시글 TOP 5</h3>
           <div class="space-y-3">
-            <div v-for="(post, index) in topPosts" :key="post.id" @click="openDetail(post)" class="flex items-center justify-between p-3 rounded-xl bg-white/50 hover:bg-white/80 transition cursor-pointer border border-white">
+            <div v-for="(post, index) in topPosts" :key="post.id" @click.stop="openDetail(post)" class="flex items-center justify-between p-3 rounded-xl bg-white/50 hover:bg-white/80 transition cursor-pointer border border-white">
               <div class="flex items-center space-x-3 truncate">
                 <span class="w-6 h-6 rounded-full bg-cerulean-100 text-cerulean-700 font-bold text-xs flex items-center justify-center">{{ index + 1 }}</span>
                 <span class="text-sm font-medium text-slate-700 truncate">{{ post.title }}</span>
@@ -151,7 +151,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 text-sm">
-            <tr v-for="post in filteredPosts" :key="post.id" @click="openDetail(post)" class="hover:bg-white/60 transition cursor-pointer">
+            <tr v-for="post in filteredPosts" :key="post.id" @click.stop="openDetail(post)" class="hover:bg-white/60 transition cursor-pointer">
               <td class="py-3 px-2 text-slate-400 text-xs">{{ post.id }}</td>
               <td class="py-3 px-2"><span class="bg-cerulean-50 text-cerulean-700 text-[11px] font-semibold px-2 py-0.5 rounded-md border border-cerulean-100">{{ getCategoryIcon(post.category) }} {{ post.category }}</span></td>
               <td class="py-3 px-2 font-medium text-slate-700 hover:text-cerulean-700 transition">{{ post.title }}</td>
@@ -198,11 +198,11 @@
     </div>
 
     <!-- 모달 2: 게시글 상세 & 비밀번호 확인 창 -->
-    <div v-if="selectedPost" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-      <div class="glass-modal w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-white space-y-4">
+    <div v-if="selectedPost" @click.self="closeDetail" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div @click.stop class="glass-modal w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-white space-y-4">
         <div class="flex justify-between items-start">
           <span class="bg-cerulean-100 text-cerulean-800 text-xs font-semibold px-2.5 py-1 rounded-md">{{ getCategoryIcon(selectedPost.category) }} {{ selectedPost.category }}</span>
-          <button @click="selectedPost = null; pwdMode = null" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+          <button @click="closeDetail" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
         </div>
         <h3 class="text-xl font-bold text-slate-800">{{ selectedPost.title }}</h3>
         <p class="text-sm text-slate-600 min-h-[5rem] bg-white/60 p-4 rounded-2xl whitespace-pre-wrap border border-white">{{ selectedPost.content }}</p>
@@ -256,11 +256,16 @@
               {{ msg.content }}
             </span>
           </div>
+          <div v-if="isChatLoading" class="text-left">
+            <span class="inline-block px-3 py-2 rounded-2xl bg-white/80 text-slate-400 border border-white rounded-bl-none shadow-sm">
+              답변 작성 중...
+            </span>
+          </div>
         </div>
 
         <div class="p-2 bg-white/60 border-t border-white/80 flex space-x-1">
-          <input v-model="chatInput" @keyup.enter="sendChatMessage" type="text" placeholder="이번 주말 부산 축제 알려줘!" class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-cerulean-500">
-          <button @click="sendChatMessage" class="bg-cerulean-700 hover:bg-cerulean-800 text-white px-3 py-2 rounded-xl text-xs font-bold transition">전송</button>
+          <input v-model="chatInput" @keyup.enter="sendChatMessage" type="text" placeholder="이번 주말 부산 축제 알려줘!" :disabled="isChatLoading" class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-cerulean-500 disabled:opacity-60">
+          <button @click="sendChatMessage" :disabled="isChatLoading" class="bg-cerulean-700 hover:bg-cerulean-800 text-white px-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-60">전송</button>
         </div>
       </div>
     </div>
@@ -332,6 +337,12 @@
             selectedPost.value = updatedPost;
           }
           updateChart();
+        };
+
+        const closeDetail = () => {
+          selectedPost.value = null;
+          pwdMode.value = null;
+          inputPwd.value = '';
         };
 
         const loadPosts = async () => {
@@ -449,8 +460,7 @@
               }
 
               posts.value = posts.value.filter(post => post.id !== selectedPost.value.id);
-              selectedPost.value = null;
-              pwdMode.value = null;
+              closeDetail();
               updateChart();
             } else if (pwdMode.value === 'edit') {
               const newTitle = prompt('수정할 제목:', selectedPost.value.title);
@@ -490,26 +500,42 @@
           }
         };
 
-        // 🚨 [챗봇 AI 연동 구역] 브라우저 메모리에 대화 보관 후 POST /api/chat 호출
         const showChat = ref(false);
         const chatInput = ref('');
+        const isChatLoading = ref(false);
         const chatHistory = ref([
           { role: 'assistant', content: '안녕하세요! 부산 권역 정보 커뮤니티 LocalHub AI입니다. 축제, 맛집, 관광지 무엇이든 물어보세요! 🐬' }
         ]);
 
-        const sendChatMessage = () => {
-          if (!chatInput.value.trim()) return;
+        const sendChatMessage = async () => {
+          if (!chatInput.value.trim() || isChatLoading.value) return;
           const userMsg = chatInput.value;
           chatHistory.value.push({ role: 'user', content: userMsg });
           chatInput.value = '';
+          isChatLoading.value = true;
 
-          // BE 연동 전 더미 AI 응답 (1초 뒤 답변)
-          setTimeout(() => {
+          try {
+            const response = await fetch(`${API_BASE}/api/chat`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: userMsg }),
+            });
+
+            if (!response.ok) {
+              const errorBody = await response.json().catch(() => null);
+              throw new Error(errorBody?.detail || '챗봇 응답을 가져오지 못했습니다.');
+            }
+
+            const data = await response.json();
+            chatHistory.value.push({ role: 'assistant', content: data.answer });
+          } catch (error) {
             chatHistory.value.push({
               role: 'assistant',
-              content: `[AI 챗봇 더미 응답] "${userMsg}"에 대한 부산 공공데이터 조회 결과입니다. 이번 주말 광안리나 해운대 인근 모범음식점 방문을 추천드립니다!`
+              content: error.message || '챗봇 응답을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.'
             });
-          }, 800);
+          } finally {
+            isChatLoading.value = false;
+          }
         };
 
         onMounted(async () => {
@@ -544,8 +570,8 @@
         return {
           currentTab, showWriteModal, selectedPost, pwdMode, inputPwd, searchKeyword,
           selectedCategory, categories, getCategoryIcon, posts, newPost, filteredPosts,
-          topPosts, submitPost, openDetail, likePost, verifyPassword,
-          showChat, chatInput, chatHistory, sendChatMessage
+          topPosts, submitPost, openDetail, likePost, verifyPassword, closeDetail,
+          showChat, chatInput, chatHistory, sendChatMessage, isChatLoading
         };
       }
     }).mount('#app');
