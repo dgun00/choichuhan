@@ -10,6 +10,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- FullCalendar CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
   <!-- LocalHub API 설정 -->
   <script src="./config.js"></script>
   
@@ -110,6 +112,22 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- 축제 캘린더 (FullCalendar) -->
+      <div class="glass-card p-6 rounded-2xl relative">
+        <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">📅</span> 부산 축제·행사 캘린더</h3>
+        <div id="festivalCalendar" class="bg-white/70 rounded-2xl p-3 border border-white"></div>
+
+        <!-- 일정에 마우스 올리면 뜨는 간이 정보 카드 -->
+        <div v-if="hoveredEvent" class="absolute z-50 w-64 bg-white rounded-2xl shadow-2xl border border-cerulean-100 p-3 text-xs space-y-1.5 pointer-events-none animate-fade-in"
+             :style="{ left: hoveredEvent.x + 'px', top: hoveredEvent.y + 'px' }">
+          <img v-if="hoveredEvent.image" :src="hoveredEvent.image" class="w-full h-28 object-cover rounded-xl mb-1">
+          <p class="font-bold text-slate-800 leading-snug">{{ hoveredEvent.title }}</p>
+          <p class="text-slate-500">📍 {{ hoveredEvent.place || '장소 정보 없음' }}</p>
+          <p class="text-slate-500">🕐 {{ hoveredEvent.playtime || '운영시간 정보 없음' }}</p>
+          <p class="text-slate-500">💰 {{ hoveredEvent.fee || '요금 정보 없음' }}</p>
         </div>
       </div>
     </div>
@@ -311,9 +329,13 @@
         const inputPwd = ref('');
         const searchKeyword = ref('');
         const selectedCategory = ref('전체');
+        const hoveredEvent = ref(null);
 
         watch(currentTab, (tab) => {
           localStorage.setItem(ACTIVE_TAB_KEY, tab);
+          if (tab === 'home' && !calendarInstance) {
+            initCalendar();
+          }
         });
 
         const categories = ['전체', '관광지', '맛집', '축제·행사', '레포츠', '문화시설', '쇼핑', '숙박', '여행코스', '자유'];
@@ -350,6 +372,7 @@
         const newComment = ref({ content: '', password: '' });
 
         let chartInstance = null;
+        let calendarInstance = null;
         const updateChart = () => {
           if (!chartInstance) return;
           const counts = [
@@ -463,6 +486,116 @@
             posts.value = [...fallbackPosts];
           }
           updateChart();
+        };
+
+        // 축제마다 다른 색이 보이도록 고정 팔레트에서 id 기반으로 하나씩 배정
+        const CALENDAR_COLORS = [
+          '#0f4c81', '#0ea5e9', '#f97316', '#16a34a', '#a855f7',
+          '#e11d48', '#0d9488', '#ca8a04', '#6366f1', '#db2777',
+        ];
+
+        const colorForEvent = (key) => {
+          let hash = 0;
+          for (let i = 0; i < key.length; i++) {
+            hash = (hash * 31 + key.charCodeAt(i)) % CALENDAR_COLORS.length;
+          }
+          return CALENDAR_COLORS[Math.abs(hash) % CALENDAR_COLORS.length];
+        };
+
+        const initCalendar = async () => {
+          await nextTick();
+          const calendarEl = document.getElementById('festivalCalendar');
+          if (!calendarEl || calendarInstance) return;
+
+          let events = [];
+          try {
+            const response = await fetch(`${API_BASE}/api/public-data/festivals`);
+            if (response.ok) {
+              const data = await response.json();
+              events = data.map(event => ({
+                id: event.id,
+                title: event.title,
+                start: event.start,
+                end: event.end,
+                color: colorForEvent(String(event.id || event.title)),
+                extendedProps: {
+                  place: event.place,
+                  address: event.address,
+                  fee: event.fee,
+                  playtime: event.playtime,
+                  image: event.image,
+                },
+              }));
+            }
+          } catch (error) {
+            console.error(error);
+          }
+
+          // FullCalendar 콜백의 jsEvent 좌표가 부정확할 때가 있어서, 문서 전체 기준으로
+          // 실제 커서 위치를 항상 최신으로 따로 추적합니다 (캘린더 진입 전부터 추적해야
+          // 처음 호버하는 순간에도 좌표가 비어있지 않습니다).
+          let lastMouseX = 0;
+          let lastMouseY = 0;
+          document.addEventListener('mousemove', (jsEvent) => {
+            lastMouseX = jsEvent.clientX;
+            lastMouseY = jsEvent.clientY;
+            if (hoveredEvent.value) {
+              positionTooltip(lastMouseX, lastMouseY);
+            }
+          });
+
+          // 카드가 .glass-card(backdrop-filter가 있어 fixed 자식의 기준점이 되는 컨테이너) 안에서
+          // absolute로 배치되므로, 좌표를 이 컨테이너 기준 상대 좌표로 변환합니다.
+          const containerEl = calendarEl.parentElement;
+
+          function positionTooltip(clientX, clientY) {
+            if (!hoveredEvent.value) return;
+            const containerRect = containerEl.getBoundingClientRect();
+            const offset = 6;
+            const tooltipWidth = 272;
+            const tooltipHeight = 260;
+
+            let x = clientX - containerRect.left + offset;
+            let y = clientY - containerRect.top + offset;
+
+            if (x + tooltipWidth > containerRect.width) {
+              x = clientX - containerRect.left - tooltipWidth - offset;
+            }
+            if (y + tooltipHeight > containerRect.height) {
+              y = clientY - containerRect.top - tooltipHeight - offset;
+            }
+
+            hoveredEvent.value.x = Math.max(8, x);
+            hoveredEvent.value.y = Math.max(8, y);
+          }
+
+          calendarInstance = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'ko',
+            height: 'auto',
+            events,
+            eventMouseEnter: (info) => {
+              const props = info.event.extendedProps;
+              // FullCalendar가 넘겨주는 jsEvent 좌표가 실제 커서 위치와 어긋나는 경우가 있어,
+              // mousemove로 직접 추적한 좌표를 우선 사용합니다.
+              const clientX = lastMouseX || info.jsEvent?.clientX || 0;
+              const clientY = lastMouseY || info.jsEvent?.clientY || 0;
+              hoveredEvent.value = {
+                title: info.event.title,
+                place: props.place,
+                fee: props.fee,
+                playtime: props.playtime,
+                image: props.image,
+                x: 0,
+                y: 0,
+              };
+              positionTooltip(clientX, clientY);
+            },
+            eventMouseLeave: () => {
+              hoveredEvent.value = null;
+            },
+          });
+          calendarInstance.render();
         };
 
         // 실시간 검색 및 카테고리 필터링
@@ -682,13 +815,17 @@
           }
 
           await loadPosts();
+
+          if (currentTab.value === 'home') {
+            initCalendar();
+          }
         });
 
         return {
           currentTab, showWriteModal, selectedPost, pwdMode, inputPwd, searchKeyword,
           selectedCategory, categories, getCategoryIcon, posts, newPost, filteredPosts,
           topPosts, submitPost, openDetail, likePost, verifyPassword, closeDetail,
-          comments, newComment, submitComment, deleteComment, formatDate,
+          comments, newComment, submitComment, deleteComment, formatDate, hoveredEvent,
           showChat, chatInput, chatHistory, sendChatMessage, isChatLoading, chatScrollRef
         };
       }

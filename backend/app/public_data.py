@@ -605,3 +605,50 @@ def preview_file(relative_path: str, limit: int = 30) -> dict[str, Any]:
         "total": len(records),
         "items": records[:limit],
     }
+
+
+def get_festival_events() -> list[dict[str, Any]]:
+    """FullCalendar에 바로 넣을 수 있는 형태로 축제·행사 일정을 반환합니다."""
+    events: list[dict[str, Any]] = []
+
+    for path in list_json_files():
+        if infer_category(path.name) != "축제·행사":
+            continue
+
+        try:
+            records = extract_records(load_file(path))
+        except Exception:
+            continue
+
+        for record in records:
+            start = _parse_event_date(record.get("eventstartdate"))
+            if not start:
+                continue
+
+            end = _parse_event_date(record.get("eventenddate")) or start
+
+            title = _pick_value(record, TITLE_KEYS) or "축제·행사"
+            title = " ".join(title.split())[:120]
+            address = _pick_value(record, ADDRESS_KEYS)
+            place = str(record.get("eventplace") or "").strip() or address
+            fee = str(record.get("usetimefestival") or "").strip()
+            playtime = str(record.get("playtime") or "").strip()
+            image = str(record.get("firstimage") or "").strip()
+
+            events.append(
+                {
+                    "id": str(record.get("contentid") or f"{path.stem}-{len(events)}"),
+                    "title": title,
+                    # FullCalendar의 종일 이벤트 end는 배타적(exclusive)이라 하루를 더해줍니다.
+                    "start": start.isoformat(),
+                    "end": (end + timedelta(days=1)).isoformat(),
+                    "place": place,
+                    "address": address,
+                    "fee": fee,
+                    "playtime": playtime,
+                    "image": image,
+                }
+            )
+
+    events.sort(key=lambda event: event["start"])
+    return events

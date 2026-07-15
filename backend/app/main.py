@@ -22,6 +22,7 @@ from .database import (
 )
 from .models import Comment, Post
 from .public_data import (
+    get_festival_events,
     get_summary,
     preview_file,
     search_public_data,
@@ -448,6 +449,11 @@ def delete_comment(
 @app.get("/api/public-data/summary")
 def public_data_summary():
     return get_summary()
+
+
+@app.get("/api/public-data/festivals")
+def public_data_festivals():
+    return get_festival_events()
 
 
 @app.get("/api/public-data/search")
