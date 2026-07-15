@@ -44,6 +44,12 @@ SEARCH_STOPWORDS = {
     "찾아줘", "찾아", "가볼", "갈만한", "좀", "좀요", "정보", "후기", "싶어",
 }
 
+BUSAN_DISTRICTS: tuple[str, ...] = (
+    "강서구", "금정구", "기장군", "남구", "동구", "동래구", "부산진구",
+    "북구", "사상구", "사하구", "서구", "수영구", "연제구", "영도구",
+    "중구", "해운대구",
+)
+
 QUERY_CATEGORY_HINTS: tuple[tuple[tuple[str, ...], str], ...] = (
     (("축제", "행사", "공연", "페스티벌"), "축제·행사"),
     (("관광", "여행", "명소", "가볼", "가볼만한", "갈만한", "추천", "둘러", "산책", "구경"), "관광지"),
@@ -175,6 +181,11 @@ def _infer_query_category(keyword: str) -> str | None:
     return None
 
 
+def _extract_query_districts(keyword: str) -> list[str]:
+    normalized_keyword = _normalize_text(keyword)
+    return [district for district in BUSAN_DISTRICTS if district in normalized_keyword]
+
+
 def _record_searchable_text(record: dict[str, Any]) -> str:
     flattened_values = [
         value.strip()
@@ -189,10 +200,12 @@ def _record_score(
     path: Path,
     query_terms: list[str],
     query_category: str | None,
+    query_districts: list[str] | None = None,
 ) -> float:
     searchable = _record_searchable_text(record)
     title = _normalize_text(_pick_value(record, TITLE_KEYS))
     summary = _normalize_text(_compact_summary(record))
+    address = _normalize_text(_pick_value(record, ADDRESS_KEYS))
     file_category = infer_category(path.name)
 
     score = 0.0
@@ -202,6 +215,12 @@ def _record_score(
 
     if query_category and query_category in searchable:
         score += 3.0
+
+    if query_districts:
+        if any(district in address for district in query_districts):
+            score += 5.0
+        elif any(district in searchable for district in query_districts):
+            score += 3.0
 
     for term in query_terms:
         if term in title:
@@ -332,6 +351,7 @@ def search_public_data(keyword: str, limit: int = 20) -> list[dict[str, Any]]:
 
     query_terms = _extract_query_terms(keyword)
     query_category = _infer_query_category(keyword)
+    query_districts = _extract_query_districts(keyword)
 
     scored_results: list[tuple[float, dict[str, Any]]] = []
 
@@ -342,7 +362,7 @@ def search_public_data(keyword: str, limit: int = 20) -> list[dict[str, Any]]:
             continue
 
         for record in records:
-            score = _record_score(record, path, query_terms, query_category)
+            score = _record_score(record, path, query_terms, query_category, query_districts)
 
             if score <= 0 and query_category is None:
                 continue
