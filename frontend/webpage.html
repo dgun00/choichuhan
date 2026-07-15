@@ -199,7 +199,7 @@
 
     <!-- 모달 2: 게시글 상세 & 비밀번호 확인 창 -->
     <div v-if="selectedPost" @click.self="closeDetail" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-      <div @click.stop class="glass-modal w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-white space-y-4">
+      <div @click.stop class="glass-modal w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-white space-y-4 max-h-[85vh] overflow-y-auto">
         <div class="flex justify-between items-start">
           <span class="bg-cerulean-100 text-cerulean-800 text-xs font-semibold px-2.5 py-1 rounded-md">{{ getCategoryIcon(selectedPost.category) }} {{ selectedPost.category }}</span>
           <button @click="closeDetail" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
@@ -227,6 +227,29 @@
             <input v-model="inputPwd" type="password" placeholder="비밀번호 입력" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs outline-none">
             <button @click="verifyPassword" class="px-4 py-1.5 bg-cerulean-700 text-white rounded-xl text-xs font-bold shadow hover:bg-cerulean-800">확인</button>
             <button @click="pwdMode = null; inputPwd = ''" class="px-3 py-1.5 bg-slate-300 text-slate-700 rounded-xl text-xs">취소</button>
+          </div>
+        </div>
+
+        <!-- 댓글 영역 -->
+        <div class="pt-3 border-t border-slate-200/60 space-y-3">
+          <p class="text-xs font-bold text-slate-600">💬 댓글 {{ comments.length }}</p>
+
+          <div v-if="comments.length === 0" class="text-xs text-slate-400 text-center py-3">
+            첫 댓글을 남겨보세요!
+          </div>
+
+          <div v-for="comment in comments" :key="comment.id" class="bg-white/60 rounded-xl p-2.5 border border-white text-xs space-y-1">
+            <div class="flex justify-between items-start gap-2">
+              <p class="text-slate-700 whitespace-pre-wrap flex-1">{{ comment.content }}</p>
+              <button @click="deleteComment(comment)" class="text-slate-400 hover:text-rose-500 text-[11px] shrink-0">삭제</button>
+            </div>
+            <p class="text-[10px] text-slate-400">{{ formatDate(comment.created_at) }}</p>
+          </div>
+
+          <div class="flex space-x-2 pt-1">
+            <input v-model="newComment.content" type="text" placeholder="댓글을 입력하세요" @keyup.enter="submitComment" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs outline-none">
+            <input v-model="newComment.password" type="password" placeholder="비밀번호" class="w-20 bg-white border border-slate-300 rounded-xl px-2 py-1.5 text-xs outline-none">
+            <button @click="submitComment" class="px-3 py-1.5 bg-cerulean-700 text-white rounded-xl text-xs font-bold shadow hover:bg-cerulean-800 shrink-0">등록</button>
           </div>
         </div>
       </div>
@@ -322,6 +345,8 @@
 
         const posts = ref([...fallbackPosts]);
         const newPost = ref({ category: '맛집', title: '', content: '', password: '' });
+        const comments = ref([]);
+        const newComment = ref({ content: '', password: '' });
 
         let chartInstance = null;
         const updateChart = () => {
@@ -348,6 +373,75 @@
           selectedPost.value = null;
           pwdMode.value = null;
           inputPwd.value = '';
+          comments.value = [];
+          newComment.value = { content: '', password: '' };
+        };
+
+        const formatDate = (isoString) => {
+          const date = new Date(isoString);
+          return date.toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        };
+
+        const loadComments = async (postId) => {
+          try {
+            const response = await fetch(`${API_BASE}/api/posts/${postId}/comments`);
+            if (!response.ok) throw new Error();
+            comments.value = await response.json();
+          } catch (error) {
+            comments.value = [];
+          }
+        };
+
+        const submitComment = async () => {
+          if (!selectedPost.value) return;
+          if (!newComment.value.content.trim() || !newComment.value.password.trim()) {
+            alert('댓글 내용과 비밀번호를 입력해 주세요.');
+            return;
+          }
+
+          try {
+            const response = await fetch(`${API_BASE}/api/posts/${selectedPost.value.id}/comments`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: newComment.value.content,
+                password: newComment.value.password,
+              }),
+            });
+
+            if (!response.ok) {
+              const errorBody = await response.json().catch(() => null);
+              throw new Error(errorBody?.detail || '댓글 등록에 실패했습니다.');
+            }
+
+            const created = await response.json();
+            comments.value.push(created);
+            newComment.value = { content: '', password: '' };
+          } catch (error) {
+            alert(error.message || '댓글 등록에 실패했습니다.');
+          }
+        };
+
+        const deleteComment = async (comment) => {
+          const password = prompt('댓글 삭제 비밀번호를 입력하세요:');
+          if (!password) return;
+
+          try {
+            const response = await fetch(`${API_BASE}/api/posts/${selectedPost.value.id}/comments/${comment.id}`, {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ password }),
+            });
+
+            if (!response.ok) {
+              const errorBody = await response.json().catch(() => null);
+              throw new Error(errorBody?.detail || '댓글 삭제에 실패했습니다.');
+            }
+
+            comments.value = comments.value.filter(c => c.id !== comment.id);
+          } catch (error) {
+            alert(error.message || '댓글 삭제에 실패했습니다.');
+          }
         };
 
         const loadPosts = async () => {
@@ -420,6 +514,7 @@
             selectedPost.value = latestPost;
             pwdMode.value = null;
             inputPwd.value = '';
+            loadComments(latestPost.id);
           } catch (error) {
             alert(error.message || '게시글을 불러오지 못했습니다.');
           }
@@ -586,6 +681,7 @@
           currentTab, showWriteModal, selectedPost, pwdMode, inputPwd, searchKeyword,
           selectedCategory, categories, getCategoryIcon, posts, newPost, filteredPosts,
           topPosts, submitPost, openDetail, likePost, verifyPassword, closeDetail,
+          comments, newComment, submitComment, deleteComment, formatDate,
           showChat, chatInput, chatHistory, sendChatMessage, isChatLoading, chatScrollRef
         };
       }

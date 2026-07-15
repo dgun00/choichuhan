@@ -20,7 +20,7 @@ from .database import (
     get_db,
     SessionLocal,
 )
-from .models import Post
+from .models import Comment, Post
 from .public_data import (
     get_summary,
     preview_file,
@@ -29,6 +29,8 @@ from .public_data import (
 from .schemas import (
     ChatRequest,
     ChatResponse,
+    CommentCreate,
+    CommentResponse,
     PasswordRequest,
     PostCreate,
     PostResponse,
@@ -374,6 +376,51 @@ def like_post(post_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(post)
     return post
+
+
+@app.get("/api/posts/{post_id}/comments", response_model=list[CommentResponse])
+def get_comments(post_id: int, db: Session = Depends(get_db)):
+    post = db.get(Post, post_id)
+    if post is None:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+
+    return list(
+        db.scalars(
+            select(Comment).where(Comment.post_id == post_id).order_by(Comment.id.asc())
+        ).all()
+    )
+
+
+@app.post("/api/posts/{post_id}/comments", response_model=CommentResponse, status_code=201)
+def create_comment(post_id: int, payload: CommentCreate, db: Session = Depends(get_db)):
+    post = db.get(Post, post_id)
+    if post is None:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+
+    comment = Comment(post_id=post_id, content=payload.content, password=payload.password)
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+    return comment
+
+
+@app.delete("/api/posts/{post_id}/comments/{comment_id}", status_code=204)
+def delete_comment(
+    post_id: int,
+    comment_id: int,
+    payload: PasswordRequest = Body(...),
+    db: Session = Depends(get_db),
+):
+    comment = db.get(Comment, comment_id)
+    if comment is None or comment.post_id != post_id:
+        raise HTTPException(status_code=404, detail="댓글을 찾을 수 없습니다.")
+
+    if comment.password != payload.password:
+        raise HTTPException(status_code=403, detail="비밀번호가 일치하지 않습니다.")
+
+    db.delete(comment)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.get("/api/public-data/summary")
