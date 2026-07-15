@@ -4,6 +4,7 @@ import json
 import os
 import re
 import unicodedata
+from datetime import date, datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,13 @@ SEARCH_STOPWORDS = {
     "추천해", "추천해줘", "추천해줘요", "알려", "해줘", "해주세요", "주세요",
     "찾아줘", "찾아", "가볼", "갈만한", "좀", "좀요", "정보", "후기", "싶어",
 }
+
+KST = timezone(timedelta(hours=9))
+
+
+def today_kst() -> date:
+    return datetime.now(KST).date()
+
 
 BUSAN_DISTRICTS: tuple[str, ...] = (
     "강서구", "금정구", "기장군", "남구", "동구", "동래구", "부산진구",
@@ -186,6 +194,163 @@ def _extract_query_districts(keyword: str) -> list[str]:
     return [district for district in BUSAN_DISTRICTS if district in normalized_keyword]
 
 
+_WEEKDAY_KEYWORDS: tuple[tuple[str, int], ...] = (
+    ("월요일", 0), ("화요일", 1), ("수요일", 2), ("목요일", 3),
+    ("금요일", 4), ("토요일", 5), ("일요일", 6),
+)
+
+_SEASON_RANGES: tuple[tuple[str, int, int], ...] = (
+    ("봄", 3, 5),
+    ("여름", 6, 8),
+    ("가을", 9, 11),
+    ("겨울", 12, 2),
+)
+
+_MONTH_DAY_RE = re.compile(r"(\d{1,2})\s*월\s*(\d{1,2})\s*일")
+_MONTH_ONLY_RE = re.compile(r"(\d{1,2})\s*월(?!요일)")
+
+
+def _month_range(year: int, month: int) -> tuple[date, date]:
+    start = date(year, month, 1)
+    end = (
+        date(year + 1, 1, 1) - timedelta(days=1)
+        if month == 12
+        else date(year, month + 1, 1) - timedelta(days=1)
+    )
+    return (start, end)
+
+
+def _extract_query_date_range(keyword: str) -> tuple[date, date] | None:
+    normalized = _normalize_text(keyword)
+    compact = normalized.replace(" ", "")
+    today = today_kst()
+
+    # 1) "8월 1일"처럼 구체적인 날짜
+    day_match = _MONTH_DAY_RE.search(normalized)
+    if day_match:
+        month, day = int(day_match.group(1)), int(day_match.group(2))
+        if 1 <= month <= 12 and 1 <= day <= 31:
+            try:
+                target = date(today.year, month, day)
+            except ValueError:
+                target = None
+            if target:
+                return (target, target)
+
+    # 2) 특정 요일 ("이번주 토요일", "다음주 금요일", 그냥 "토요일" 등)
+    for name, idx in _WEEKDAY_KEYWORDS:
+        if name not in compact:
+            continue
+        if "다음주" in compact:
+            base_monday = today - timedelta(days=today.weekday()) + timedelta(days=7)
+            target = base_monday + timedelta(days=idx)
+        else:
+            days_ahead = (idx - today.weekday()) % 7
+            target = today + timedelta(days=days_ahead)
+        return (target, target)
+
+    # 3) 오늘 기준 하루 단위 상대 표현
+    if "글피" in compact:
+        target = today + timedelta(days=3)
+        return (target, target)
+    if "모레" in compact:
+        target = today + timedelta(days=2)
+        return (target, target)
+    if "어제" in compact:
+        target = today - timedelta(days=1)
+        return (target, target)
+    if "내일" in compact:
+        target = today + timedelta(days=1)
+        return (target, target)
+    if "오늘" in compact:
+        return (today, today)
+
+    # 4) 주/주말 단위
+    if "다음주말" in compact:
+        saturday = today + timedelta(days=(5 - today.weekday()) % 7 + 7)
+        return (saturday, saturday + timedelta(days=1))
+    if "주말" in compact:
+        saturday = today + timedelta(days=(5 - today.weekday()) % 7)
+        return (saturday, saturday + timedelta(days=1))
+    if "다음주" in compact:
+        this_monday = today - timedelta(days=today.weekday())
+        next_monday = this_monday + timedelta(days=7)
+        return (next_monday, next_monday + timedelta(days=6))
+    if "저번주" in compact or "지난주" in compact:
+        this_monday = today - timedelta(days=today.weekday())
+        last_monday = this_monday - timedelta(days=7)
+        return (last_monday, last_monday + timedelta(days=6))
+    if "이번주" in compact:
+        monday = today - timedelta(days=today.weekday())
+        return (monday, monday + timedelta(days=6))
+
+    # 5) "8월"처럼 특정 달만 지정 (요일·일자 표현은 위에서 먼저 처리됨)
+    month_match = _MONTH_ONLY_RE.search(normalized)
+    if month_match:
+        month = int(month_match.group(1))
+        if 1 <= month <= 12:
+            return _month_range(today.year, month)
+
+    # 6) 이번달/다음달/저번달
+    if "다음달" in compact:
+        next_month = (
+            today.replace(year=today.year + 1, month=1, day=1)
+            if today.month == 12
+            else today.replace(month=today.month + 1, day=1)
+        )
+        return _month_range(next_month.year, next_month.month)
+    if "저번달" in compact or "지난달" in compact:
+        prev_month = (
+            today.replace(year=today.year - 1, month=12, day=1)
+            if today.month == 1
+            else today.replace(month=today.month - 1, day=1)
+        )
+        return _month_range(prev_month.year, prev_month.month)
+    if "이번달" in compact:
+        return _month_range(today.year, today.month)
+
+    # 7) 계절
+    for season, start_month, end_month in _SEASON_RANGES:
+        if season not in compact:
+            continue
+        start = date(today.year, start_month, 1)
+        if start_month <= end_month:
+            _, end = _month_range(today.year, end_month)
+        else:
+            _, end = _month_range(today.year + 1, end_month)
+        return (start, end)
+
+    # 8) 연 단위
+    if "내년" in compact:
+        return (date(today.year + 1, 1, 1), date(today.year + 1, 12, 31))
+    if "작년" in compact or "지난해" in compact:
+        return (date(today.year - 1, 1, 1), date(today.year - 1, 12, 31))
+    if "올해" in compact or "금년" in compact:
+        return (date(today.year, 1, 1), date(today.year, 12, 31))
+
+    return None
+
+
+def _parse_event_date(value: Any) -> date | None:
+    if not isinstance(value, str) or len(value) != 8 or not value.isdigit():
+        return None
+    try:
+        return date(int(value[:4]), int(value[4:6]), int(value[6:8]))
+    except ValueError:
+        return None
+
+
+def _format_event_period(record: dict[str, Any]) -> str:
+    start = _parse_event_date(record.get("eventstartdate"))
+    end = _parse_event_date(record.get("eventenddate")) or start
+
+    if not start:
+        return ""
+    if end and end != start:
+        return f"기간 {start.strftime('%Y.%m.%d')}~{end.strftime('%Y.%m.%d')}"
+    return f"기간 {start.strftime('%Y.%m.%d')}"
+
+
 def _record_searchable_text(record: dict[str, Any]) -> str:
     flattened_values = [
         value.strip()
@@ -201,6 +366,7 @@ def _record_score(
     query_terms: list[str],
     query_category: str | None,
     query_districts: list[str] | None = None,
+    query_date_range: tuple[date, date] | None = None,
 ) -> float:
     searchable = _record_searchable_text(record)
     title = _normalize_text(_pick_value(record, TITLE_KEYS))
@@ -222,6 +388,14 @@ def _record_score(
         elif any(district in searchable for district in query_districts):
             score += 3.0
 
+    if query_date_range:
+        event_start = _parse_event_date(record.get("eventstartdate"))
+        event_end = _parse_event_date(record.get("eventenddate")) or event_start
+        if event_start and event_end:
+            query_start, query_end = query_date_range
+            if event_start <= query_end and event_end >= query_start:
+                score += 8.0
+
     for term in query_terms:
         if term in title:
             score += 4.0
@@ -238,7 +412,7 @@ def _record_score(
     return score
 
 
-def _compact_summary(record: dict[str, Any], max_length: int = 180) -> str:
+def _compact_summary(record: dict[str, Any], max_length: int = 220) -> str:
     summary = _pick_value(record, SUMMARY_KEYS)
     address = _pick_value(record, ADDRESS_KEYS)
 
@@ -255,6 +429,23 @@ def _compact_summary(record: dict[str, Any], max_length: int = 180) -> str:
             if value.strip()
         ]
         text = " · ".join(values[:5])
+
+    # 축제공연행사(contentTypeId=15) 전용 일정 필드가 있으면 기간·장소·요금을 요약 앞에 붙입니다.
+    event_bits = []
+    period = _format_event_period(record)
+    if period:
+        event_bits.append(period)
+
+    event_place = str(record.get("eventplace") or "").strip()
+    if event_place:
+        event_bits.append(f"장소 {event_place}")
+
+    fee = str(record.get("usetimefestival") or "").strip()
+    if fee:
+        event_bits.append(f"요금 {fee}")
+
+    if event_bits:
+        text = " · ".join(event_bits) + " · " + text
 
     text = " ".join(text.split())
     return text[:max_length] + ("…" if len(text) > max_length else "")
@@ -352,6 +543,7 @@ def search_public_data(keyword: str, limit: int = 20) -> list[dict[str, Any]]:
     query_terms = _extract_query_terms(keyword)
     query_category = _infer_query_category(keyword)
     query_districts = _extract_query_districts(keyword)
+    query_date_range = _extract_query_date_range(keyword)
 
     scored_results: list[tuple[float, dict[str, Any]]] = []
 
@@ -362,7 +554,9 @@ def search_public_data(keyword: str, limit: int = 20) -> list[dict[str, Any]]:
             continue
 
         for record in records:
-            score = _record_score(record, path, query_terms, query_category, query_districts)
+            score = _record_score(
+                record, path, query_terms, query_category, query_districts, query_date_range
+            )
 
             if score <= 0 and query_category is None:
                 continue
