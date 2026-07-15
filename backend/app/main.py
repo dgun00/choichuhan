@@ -27,6 +27,7 @@ from .public_data import (
     search_public_data,
     today_kst,
 )
+from .weather import get_weather_regions
 from .schemas import (
     ChatRequest,
     ChatResponse,
@@ -443,6 +444,11 @@ def delete_comment(
     db.delete(comment)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@app.get("/api/weather/regions")
+def weather_regions():
+    return {"regions": get_weather_regions()}
 
 
 @app.get("/api/public-data/summary")
