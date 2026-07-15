@@ -42,6 +42,9 @@
 import { ref, nextTick, watch} from 'vue';
 import axios from 'axios';
 
+const STORAGE_KEY = 'localhub.chat.history';
+const MAX_HISTORY = 100;
+
 const showChat = ref(false);
 const chatInput = ref('');
 const chatHistory = ref([
@@ -60,6 +63,30 @@ const scrollChatToBottom = async () => {
   }
 };
 
+// 초기 로컬스토리지 복원
+try {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length) {
+      chatHistory.value = parsed;
+    }
+  }
+} catch (e) {
+  console.warn('chat history load failed', e);
+}
+
+// 변경 시 저장 (최대 MAX_HISTORY)
+watch(chatHistory, (val) => {
+  try {
+    const toSave = Array.isArray(val) ? val.slice(-MAX_HISTORY) : val;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  } catch (e) {
+    console.warn('chat history save failed', e);
+  }
+}, { deep: true });
+
+// 자동 스크롤
 watch([chatHistory, isChatLoading, showChat], scrollChatToBottom, { deep: true });
 
 const sendChatMessage = async () => {
