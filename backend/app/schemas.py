@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -8,6 +8,14 @@ ALLOWED_CATEGORIES = {
     "관광지", "맛집", "축제·행사", "레포츠", "문화시설",
     "쇼핑", "숙박", "여행코스", "자유",
 }
+
+KST = timezone(timedelta(hours=9))
+
+
+def _attach_kst(value: datetime) -> datetime:
+    if isinstance(value, datetime) and value.tzinfo is None:
+        return value.replace(tzinfo=KST)
+    return value
 
 
 class PostFields(BaseModel):
@@ -53,6 +61,11 @@ class PostResponse(PostFields):
     created_at: datetime
     updated_at: datetime
 
+    @field_validator("created_at", "updated_at", mode="before")
+    @classmethod
+    def attach_kst(cls, value: datetime) -> datetime:
+        return _attach_kst(value)
+
 
 class CommentCreate(BaseModel):
     content: str = Field(min_length=1, max_length=1000)
@@ -74,6 +87,11 @@ class CommentResponse(BaseModel):
     post_id: int
     content: str
     created_at: datetime
+
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def attach_kst(cls, value: datetime) -> datetime:
+        return _attach_kst(value)
 
 
 class ChatRequest(BaseModel):
