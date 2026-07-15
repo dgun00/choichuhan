@@ -55,6 +55,7 @@ watch(currentTab, (tab) => {
 const loadPosts = async () => {
   try {
     const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/posts`);
+    console.log('API /api/posts response:', response.data);
     posts.value = response.data;
   } catch (error) {
     console.error("게시글 로드 실패, 기본 데이터 사용", error);
