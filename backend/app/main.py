@@ -25,6 +25,7 @@ from .public_data import (
     get_summary,
     preview_file,
     search_public_data,
+    today_kst,
 )
 from .schemas import (
     ChatRequest,
@@ -128,8 +129,17 @@ def _format_public_context(items: list[dict[str, object]]) -> str:
     return "\n\n".join(lines)
 
 
+_WEEKDAY_KO = ("월", "화", "수", "목", "금", "토", "일")
+
+
+def _today_str() -> str:
+    today = today_kst()
+    return f"{today.year}년 {today.month}월 {today.day}일 ({_WEEKDAY_KO[today.weekday()]}요일)"
+
+
 def _build_retrieval_prompt(keyword: str, public_results: list[dict[str, object]]) -> list[dict[str, str]]:
     context = _format_public_context(public_results)
+    today_str = _today_str()
     return [
         {
             "role": "system",
@@ -138,12 +148,14 @@ def _build_retrieval_prompt(keyword: str, public_results: list[dict[str, object]
                 "아래 제공된 부산 공공데이터 문맥을 우선 근거로 삼아 한국어로 친절하고 자연스럽게 답한다. "
                 "말투는 친절하고 간결하게 유지하고, 실제 상담하듯 한두 문장으로 먼저 핵심을 말한다. "
                 "문맥에 있는 장소·시설 이름, 주소 같은 정보는 적극적으로 활용해서 최대한 도움이 되게 답한다. "
-                "제공되는 데이터에는 날짜·요일·기간 정보가 전혀 없다. "
-                "그래서 질문에 '이번 주말', '이번달', '오늘', '내일', '언제' 같은 날짜·시점 관련 표현이 들어있으면, "
-                "답변 맨 앞에서 먼저 '데이터에 날짜 정보가 없어서 지금이 그 시점인지는 정확히 확인해 드릴 수 없어요'라는 취지로 한 문장으로 짚어주고, "
-                "그다음에 이어서 문맥에 있는 장소·시설 이름과 위치 정보로 최대한 답변을 계속한다. "
-                "문맥에 날짜·시간·요금처럼 구체적인 세부사항이 없으면 그 부분만 모른다고 솔직히 밝히고, "
+                "사용자 메시지에는 오늘 날짜가 함께 주어진다. "
+                "축제·행사 항목의 문맥에 '기간 YYYY.MM.DD~YYYY.MM.DD' 또는 '기간 YYYY.MM.DD'처럼 날짜가 나와 있으면, "
+                "그 날짜를 오늘 날짜와 직접 비교해서 질문에 나온 시점(이번 주말·이번달·오늘·내일 등)에 실제로 해당하는지 정확하게 판단해서 답한다. "
+                "해당하지 않으면 '그 기간은 아니고, ~에 열린다'처럼 사실대로 알려준다. "
+                "축제·행사인데도 기간 정보가 안 나와 있거나, 관광지·숙박처럼 애초에 날짜 개념이 없는 카테고리의 경우에만 "
+                "'이 항목은 날짜 정보가 없어서 확인해 드릴 수 없어요'라고 그 부분만 솔직히 밝히고, "
                 "답변 전체를 거부하지 말고 아는 선에서는 계속 답한다. "
+                "문맥에 요금처럼 구체적인 세부사항이 없으면 그 부분만 모른다고 솔직히 밝힌다. "
                 "문맥에 질문과 관련된 내용이 정말 하나도 없을 때만 '관련 정보를 찾지 못했습니다'라고 말하고, "
                 "대신 어떤 종류의 질문(관광지·맛집·축제 등)이면 도움을 줄 수 있는지 짧게 안내한다. "
                 "문맥에 없는 사실을 지어내거나 과장하지는 않는다. "
@@ -153,6 +165,7 @@ def _build_retrieval_prompt(keyword: str, public_results: list[dict[str, object]
         {
             "role": "user",
             "content": (
+                f"오늘 날짜: {today_str}\n\n"
                 f"사용자 질문: {keyword}\n\n"
                 f"참고할 문맥:\n{context}\n\n"
                 "위 문맥을 우선 활용해서, 사용자가 바로 이해할 수 있게 답변해 주세요. "

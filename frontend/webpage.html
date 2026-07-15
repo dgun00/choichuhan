@@ -85,7 +85,7 @@
       <div class="glass-card rounded-3xl p-8 relative overflow-hidden">
         <div class="max-w-xl">
           <span class="bg-cerulean-100 text-cerulean-800 text-xs font-bold px-3 py-1 rounded-full border border-cerulean-300">✨ 공공데이터 100% 연동</span>
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-cerulean-900 mt-3 leading-tight">부산 권역 실시간 지역 정보 & 익명 커뮤니티</h2>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-cerulean-900 mt-3 leading-tight">부산 실시간 지역 정보 & 익명 커뮤니티</h2>
           <p class="text-slate-600 text-sm mt-2">로그인 없이 자유롭게 맛집, 관광지, 축제 정보를 나누고 AI 챗봇에게 무엇이든 물어보세요!</p>
         </div>
       </div>
@@ -224,20 +224,18 @@
         <p class="text-sm text-slate-600 min-h-[5rem] bg-white/60 p-4 rounded-2xl whitespace-pre-wrap border border-white">{{ selectedPost.content }}</p>
         
         <div class="flex justify-between items-center text-xs text-slate-400 pt-2 border-t border-slate-200/60">
-          <span>👁️ 조회수 {{ selectedPost.views }}</span>
+          <div class="flex items-center space-x-2">
+            <span>👁️ 조회수 {{ selectedPost.views }}</span>
+            <button v-if="!pwdMode" @click="pwdMode = 'edit'" class="px-2 py-1 bg-slate-200/80 hover:bg-slate-300 text-slate-700 rounded-lg text-[11px] font-medium transition">✏️ 수정</button>
+            <button v-if="!pwdMode" @click="pwdMode = 'delete'" class="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-[11px] font-medium transition">🗑️ 삭제</button>
+          </div>
           <button @click="likePost(selectedPost)" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold transition flex items-center space-x-1">
             <span>❤️ 좋아요 {{ selectedPost.likes }}</span>
           </button>
         </div>
 
-        <!-- 수정/삭제 모드 선택 -->
-        <div v-if="!pwdMode" class="flex justify-end space-x-2 pt-2">
-          <button @click="pwdMode = 'edit'" class="px-3 py-1.5 bg-slate-200/80 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-medium transition">✏️ 수정</button>
-          <button @click="pwdMode = 'delete'" class="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-medium transition">🗑️ 삭제</button>
-        </div>
-
         <!-- 평문 비밀번호 확인 입력 폼 -->
-        <div v-else class="bg-cerulean-50/80 p-3 rounded-2xl border border-cerulean-200 space-y-2">
+        <div v-if="pwdMode" class="bg-cerulean-50/80 p-3 rounded-2xl border border-cerulean-200 space-y-2">
           <p class="text-xs font-bold text-cerulean-900">🔒 {{ pwdMode === 'edit' ? '수정' : '삭제' }} 권한 확인 (등록한 비밀번호 입력)</p>
           <div class="flex space-x-2">
             <input v-model="inputPwd" type="password" placeholder="비밀번호 입력" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs outline-none">
