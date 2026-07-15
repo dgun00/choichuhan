@@ -4,7 +4,10 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-ALLOWED_CATEGORIES = {"관광지", "맛집", "축제·행사", "자유"}
+ALLOWED_CATEGORIES = {
+    "관광지", "맛집", "축제·행사", "레포츠", "문화시설",
+    "쇼핑", "숙박", "여행코스", "자유",
+}
 
 
 class PostFields(BaseModel):

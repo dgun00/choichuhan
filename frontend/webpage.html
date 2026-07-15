@@ -292,7 +292,7 @@
           localStorage.setItem(ACTIVE_TAB_KEY, tab);
         });
 
-        const categories = ['전체', '관광지', '맛집', '축제·행사', '자유'];
+        const categories = ['전체', '관광지', '맛집', '축제·행사', '레포츠', '문화시설', '쇼핑', '숙박', '여행코스', '자유'];
 
         // 카테고리별 이모지 매핑 (귀여운 포인트)
         const getCategoryIcon = (cat) => {
@@ -300,6 +300,11 @@
             case '관광지': return '🏝️';
             case '맛집': return '🍲';
             case '축제·행사': return '🎪';
+            case '레포츠': return '🏄';
+            case '문화시설': return '🏛️';
+            case '쇼핑': return '🛍️';
+            case '숙박': return '🏨';
+            case '여행코스': return '🗺️';
             case '자유': return '💬';
             default: return '🌈';
           }
