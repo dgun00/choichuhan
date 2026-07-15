@@ -10,54 +10,11 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- D3.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
   <!-- LocalHub API 설정 -->
   <script src="./config.js"></script>
   
-  <script>
-    // Tailwind 커스텀 색상 (세룰리안 블루 계열) 및 글래스모피즘 유틸리티
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            cerulean: {
-              50: '#f0f8ff',
-              100: '#e0f0fe',
-              300: '#7dd3fc',
-              500: '#0ea5e9',
-              600: '#0284c7',
-              700: '#0f4c81', // 메인 세룰리안 블루 포인트
-              800: '#075985',
-              900: '#0c4a6e',
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    /* 글래스모피즘 및 부드러운 스크롤 커스텀 */
-    .glass-card {
-      background: rgba(255, 255, 255, 0.75);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.6);
-      box-shadow: 0 8px 32px 0 rgba(15, 76, 129, 0.1);
-    }
-    .glass-modal {
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.8);
-    }
-    .glass-nav {
-      background: rgba(15, 76, 129, 0.85);
-      backdrop-filter: blur(12px);
-    }
-    body {
-      background: linear-gradient(135deg, #f0f8ff 0%, #e0f0fe 50%, #f0f8ff 100%);
-      min-height: 100vh;
-      color: #1e293b;
-    }
-  </style>
 </head>
 <body class="relative overflow-x-hidden">
   <!-- 배경 꾸미기용 은은한 블루 구체 (글래스모피즘 효과 극대화) -->
@@ -83,13 +40,13 @@
       <div class="glass-card rounded-3xl p-8 relative overflow-hidden">
         <div class="max-w-xl">
           <span class="bg-cerulean-100 text-cerulean-800 text-xs font-bold px-3 py-1 rounded-full border border-cerulean-300">✨ 공공데이터 100% 연동</span>
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-cerulean-900 mt-3 leading-tight">부산 실시간 지역 정보 & 익명 커뮤니티</h2>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-cerulean-900 mt-3 leading-tight">부산 권역 실시간 지역 정보 & 익명 커뮤니티</h2>
           <p class="text-slate-600 text-sm mt-2">로그인 없이 자유롭게 맛집, 관광지, 축제 정보를 나누고 AI 챗봇에게 무엇이든 물어보세요!</p>
         </div>
       </div>
 
-      <!-- 통계 차트 그리드 (Should-Have 1순위) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- 통계 차트 그리드 -->
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div class="glass-card p-6 rounded-2xl">
           <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">📈</span> 카테고리별 게시글 현황</h3>
           <div class="h-64 flex justify-center items-center">
@@ -97,17 +54,28 @@
           </div>
         </div>
         <div class="glass-card p-6 rounded-2xl">
-          <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">🔥</span> 실시간 인기 게시글 TOP 5</h3>
-          <div class="space-y-3">
-            <div v-for="(post, index) in topPosts" :key="post.id" @click.stop="openDetail(post)" class="flex items-center justify-between p-3 rounded-xl bg-white/50 hover:bg-white/80 transition cursor-pointer border border-white">
-              <div class="flex items-center space-x-3 truncate">
-                <span class="w-6 h-6 rounded-full bg-cerulean-100 text-cerulean-700 font-bold text-xs flex items-center justify-center">{{ index + 1 }}</span>
-                <span class="text-sm font-medium text-slate-700 truncate">{{ post.title }}</span>
-              </div>
-              <div class="flex items-center space-x-2 text-xs text-slate-500 shrink-0 ml-2">
-                <span>❤️ {{ post.likes }}</span>
-                <span>👁️ {{ post.views }}</span>
-              </div>
+          <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">📍</span> 권역별 게시글 현황</h3>
+          <div class="h-64 flex justify-center items-center">
+            <canvas id="regionChart"></canvas>
+          </div>
+        </div>
+        <div class="glass-card p-6 rounded-2xl">
+          <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">🏆</span> 인기 지역 통계</h3>
+          <div id="regionStatsChart" class="h-64 w-full"></div>
+        </div>
+      </div>
+
+      <div class="glass-card p-6 rounded-2xl">
+        <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">🔥</span> 실시간 인기 게시글 TOP 5</h3>
+        <div class="space-y-3">
+          <div v-for="(post, index) in topPosts" :key="post.id" @click.stop="openDetail(post)" class="flex items-center justify-between p-3 rounded-xl bg-white/50 hover:bg-white/80 transition cursor-pointer border border-white">
+            <div class="flex items-center space-x-3 truncate">
+              <span class="w-6 h-6 rounded-full bg-cerulean-100 text-cerulean-700 font-bold text-xs flex items-center justify-center">{{ index + 1 }}</span>
+              <span class="text-sm font-medium text-slate-700 truncate">{{ post.title }}</span>
+            </div>
+            <div class="flex items-center space-x-2 text-xs text-slate-500 shrink-0 ml-2">
+              <span>❤️ {{ post.likes }}</span>
+              <span>👁️ {{ post.views }}</span>
             </div>
           </div>
         </div>
@@ -211,18 +179,20 @@
         <p class="text-sm text-slate-600 min-h-[5rem] bg-white/60 p-4 rounded-2xl whitespace-pre-wrap border border-white">{{ selectedPost.content }}</p>
         
         <div class="flex justify-between items-center text-xs text-slate-400 pt-2 border-t border-slate-200/60">
-          <div class="flex items-center space-x-2">
-            <span>👁️ 조회수 {{ selectedPost.views }}</span>
-            <button v-if="!pwdMode" @click="pwdMode = 'edit'" class="px-2 py-1 bg-slate-200/80 hover:bg-slate-300 text-slate-700 rounded-lg text-[11px] font-medium transition">✏️ 수정</button>
-            <button v-if="!pwdMode" @click="pwdMode = 'delete'" class="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-[11px] font-medium transition">🗑️ 삭제</button>
-          </div>
+          <span>👁️ 조회수 {{ selectedPost.views }}</span>
           <button @click="likePost(selectedPost)" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold transition flex items-center space-x-1">
             <span>❤️ 좋아요 {{ selectedPost.likes }}</span>
           </button>
         </div>
 
+        <!-- 수정/삭제 모드 선택 -->
+        <div v-if="!pwdMode" class="flex justify-end space-x-2 pt-2">
+          <button @click="pwdMode = 'edit'" class="px-3 py-1.5 bg-slate-200/80 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-medium transition">✏️ 수정</button>
+          <button @click="pwdMode = 'delete'" class="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-medium transition">🗑️ 삭제</button>
+        </div>
+
         <!-- 평문 비밀번호 확인 입력 폼 -->
-        <div v-if="pwdMode" class="bg-cerulean-50/80 p-3 rounded-2xl border border-cerulean-200 space-y-2">
+        <div v-else class="bg-cerulean-50/80 p-3 rounded-2xl border border-cerulean-200 space-y-2">
           <p class="text-xs font-bold text-cerulean-900">🔒 {{ pwdMode === 'edit' ? '수정' : '삭제' }} 권한 확인 (등록한 비밀번호 입력)</p>
           <div class="flex space-x-2">
             <input v-model="inputPwd" type="password" placeholder="비밀번호 입력" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs outline-none">
@@ -349,17 +319,141 @@
         const comments = ref([]);
         const newComment = ref({ content: '', password: '' });
 
-        let chartInstance = null;
+        let categoryChartInstance = null;
+        let regionChartInstance = null;
+
+        const regionKeywords = {
+          '해운대·광안리': ['해운대', '광안리', '센텀', '마린시티'],
+          '중구·남포동': ['남포동', '중구', '국제시장', '자갈치', '부산역'],
+          '영도': ['영도', '영도구'],
+          '동래·온천장': ['동래', '온천장', '연제', '사직'],
+          '서면': ['서면', '부전', '전포'],
+          '기장': ['기장', '정관', '오시리아'],
+          '사하·감천': ['감천', '사하', '신평', '하단'],
+        };
+
+        const getRegionLabel = (post) => {
+          const text = `${post.title} ${post.content}`.toLowerCase();
+          for (const [region, keywords] of Object.entries(regionKeywords)) {
+            if (keywords.some(keyword => text.includes(keyword))) {
+              return region;
+            }
+          }
+          return '기타';
+        };
+
+        const buildRegionChartData = () => {
+          const counts = {};
+          posts.value.forEach(post => {
+            const region = getRegionLabel(post);
+            counts[region] = (counts[region] || 0) + 1;
+          });
+
+          return Object.entries(counts)
+            .map(([label, count]) => ({ label, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 6);
+        };
+
+        const buildPopularRegionData = () => {
+          const metrics = {};
+          posts.value.forEach(post => {
+            const region = getRegionLabel(post);
+            if (!metrics[region]) {
+              metrics[region] = { label: region, posts: 0, likes: 0, views: 0 };
+            }
+            metrics[region].posts += 1;
+            metrics[region].likes += post.likes || 0;
+            metrics[region].views += post.views || 0;
+          });
+
+          return Object.values(metrics)
+            .map(item => ({
+              ...item,
+              score: item.likes * 2 + item.views * 0.3,
+            }))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 6);
+        };
+
         const updateChart = () => {
-          if (!chartInstance) return;
-          const counts = [
-            posts.value.filter(p => p.category === '관광지').length,
-            posts.value.filter(p => p.category === '맛집').length,
-            posts.value.filter(p => p.category === '축제·행사').length,
-            posts.value.filter(p => p.category === '자유').length,
-          ];
-          chartInstance.data.datasets[0].data = counts;
-          chartInstance.update();
+          if (categoryChartInstance) {
+            const counts = [
+              posts.value.filter(p => p.category === '관광지').length,
+              posts.value.filter(p => p.category === '맛집').length,
+              posts.value.filter(p => p.category === '축제·행사').length,
+              posts.value.filter(p => p.category === '자유').length,
+            ];
+            categoryChartInstance.data.datasets[0].data = counts;
+            categoryChartInstance.update();
+          }
+
+          if (regionChartInstance) {
+            const regionData = buildRegionChartData();
+            regionChartInstance.data.labels = regionData.map(item => item.label);
+            regionChartInstance.data.datasets[0].data = regionData.map(item => item.count);
+            regionChartInstance.update();
+          }
+
+          renderD3RegionStats();
+        };
+
+        const renderD3RegionStats = () => {
+          const container = document.getElementById('regionStatsChart');
+          if (!container) return;
+
+          container.innerHTML = '';
+          const stats = buildPopularRegionData();
+
+          if (!stats.length) {
+            container.innerHTML = '<div class="text-xs text-slate-400 flex items-center justify-center h-full">통계 데이터가 아직 없어요.</div>';
+            return;
+          }
+
+          const width = container.clientWidth || 260;
+          const height = 220;
+          const margin = { top: 10, right: 16, bottom: 24, left: 90 };
+          const innerWidth = width - margin.left - margin.right;
+          const innerHeight = height - margin.top - margin.bottom;
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('width', width)
+            .attr('height', height)
+            .attr('viewBox', `0 0 ${width} ${height}`);
+
+          const x = d3.scaleLinear()
+            .domain([0, d3.max(stats, item => item.score) + 10])
+            .range([0, innerWidth]);
+
+          const y = d3.scaleBand()
+            .domain(stats.map(item => item.label))
+            .range([0, innerHeight])
+            .padding(0.2);
+
+          const g = svg.append('g')
+            .attr('transform', `translate(${margin.left}, ${margin.top})`);
+
+          g.selectAll('rect')
+            .data(stats)
+            .join('rect')
+            .attr('x', 0)
+            .attr('y', item => y(item.label))
+            .attr('width', item => x(item.score))
+            .attr('height', y.bandwidth())
+            .attr('rx', 8)
+            .attr('fill', '#0ea5e9');
+
+          g.append('g')
+            .call(d3.axisLeft(y).tickSize(0))
+            .call(g => g.selectAll('text').attr('fill', '#0f4c81').attr('font-size', 11));
+
+          g.append('g')
+            .attr('transform', `translate(0, ${innerHeight})`)
+            .call(d3.axisBottom(x).ticks(4).tickFormat(value => `${value}`))
+            .call(g => g.selectAll('text').attr('fill', '#64748b').attr('font-size', 10));
+
+          g.selectAll('.tick line').attr('stroke', '#dbeafe');
         };
 
         const syncSelectedPost = (updatedPost) => {
@@ -658,15 +752,14 @@
         onMounted(async () => {
           await nextTick();
 
-          const ctx = document.getElementById('categoryChart')?.getContext('2d');
-          if (ctx) {
-            chartInstance = new Chart(ctx, {
+          const categoryCtx = document.getElementById('categoryChart')?.getContext('2d');
+          if (categoryCtx) {
+            categoryChartInstance = new Chart(categoryCtx, {
               type: 'doughnut',
               data: {
                 labels: ['🏝️ 관광지', '🍲 맛집', '🎪 축제·행사', '💬 자유'],
                 datasets: [{
                   data: [2, 3, 1, 1],
-                  // 요청하신 세룰리안 블루 계열 톤온톤 컬러 적용 (혼잡하지 않음)
                   backgroundColor: ['#0f4c81', '#0284c7', '#38bdf8', '#bae6fd'],
                   borderColor: '#ffffff',
                   borderWidth: 2,
@@ -681,6 +774,39 @@
             });
           }
 
+          const regionCtx = document.getElementById('regionChart')?.getContext('2d');
+          if (regionCtx) {
+            regionChartInstance = new Chart(regionCtx, {
+              type: 'bar',
+              data: {
+                labels: [],
+                datasets: [{
+                  label: '게시글 수',
+                  data: [],
+                  backgroundColor: ['#38bdf8', '#0ea5e9', '#0284c7', '#0f4c81', '#7dd3fc', '#bae6fd'],
+                  borderRadius: 8,
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    ticks: { color: '#64748b' },
+                    grid: { color: 'rgba(148, 163, 184, 0.2)' }
+                  },
+                  x: {
+                    ticks: { color: '#64748b' },
+                    grid: { display: false }
+                  }
+                }
+              }
+            });
+          }
+
+          window.addEventListener('resize', renderD3RegionStats);
           await loadPosts();
         });
 
