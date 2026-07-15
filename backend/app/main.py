@@ -22,11 +22,13 @@ from .database import (
 )
 from .models import Comment, Post
 from .public_data import (
+    get_festival_events,
     get_summary,
     preview_file,
     search_public_data,
     today_kst,
 )
+from .weather import get_weather_regions
 from .schemas import (
     ChatRequest,
     ChatResponse,
@@ -445,9 +447,19 @@ def delete_comment(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+@app.get("/api/weather/regions")
+def weather_regions():
+    return {"regions": get_weather_regions()}
+
+
 @app.get("/api/public-data/summary")
 def public_data_summary():
     return get_summary()
+
+
+@app.get("/api/public-data/festivals")
+def public_data_festivals():
+    return get_festival_events()
 
 
 @app.get("/api/public-data/search")

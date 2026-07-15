@@ -36,26 +36,73 @@
     </div>
 
     <!-- 축제 캘린더 영역 -->
-<div class="glass-card p-6 rounded-2xl relative mt-6">
-  <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4">
-    <span class="mr-2">📅</span> 부산 축제·행사 캘린더
-  </h3>
-  <div ref="festivalCalendarRef" class="bg-white/70 rounded-2xl p-3 border border-white"></div>
-  
-  <!-- 툴팁 (마우스 오버시 정보) -->
-  <div v-if="hoveredEvent" class="absolute z-50 w-64 bg-white rounded-2xl shadow-2xl border border-cerulean-100 p-3 text-xs space-y-1.5 pointer-events-none animate-fade-in"
-       :style="{ left: hoveredEvent.x + 'px', top: hoveredEvent.y + 'px' }">
-    <img v-if="hoveredEvent.image" :src="hoveredEvent.image" class="w-full h-28 object-cover rounded-xl mb-1">
-    <p class="font-bold text-slate-800 leading-snug">{{ hoveredEvent.title }}</p>
-    <p class="text-slate-500">📍 {{ hoveredEvent.place || '장소 정보 없음' }}</p>
-    <p class="text-slate-500">🕐 {{ hoveredEvent.playtime || '운영시간 정보 없음' }}</p>
-    <p class="text-slate-500">💰 {{ hoveredEvent.fee || '요금 정보 없음' }}</p>
-  </div>
-</div>
+    <div class="glass-card p-6 rounded-2xl relative mt-6">
+      <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4">
+        <span class="mr-2">📅</span> 부산 축제·행사 캘린더
+      </h3>
+      <div ref="festivalCalendarRef" class="bg-white/70 rounded-2xl p-3 border border-white min-h-[450px]"></div>
+      
+      <!-- 툴팁 (마우스 오버시 정보) -->
+      <div v-if="hoveredEvent" class="absolute z-50 w-64 bg-white rounded-2xl shadow-2xl border border-cerulean-100 p-3 text-xs space-y-1.5 pointer-events-none animate-fade-in"
+              :style="{ left: hoveredEvent.x + 'px', top: hoveredEvent.y + 'px' }">
+        <img v-if="hoveredEvent.image" :src="hoveredEvent.image" class="w-full h-28 object-cover rounded-xl mb-1">
+            <p class="font-bold text-slate-800 leading-snug">{{ hoveredEvent.title }}</p>
+            <p class="text-slate-500">📍 {{ hoveredEvent.place || '장소 정보 없음' }}</p>
+            <p class="text-slate-500">🕐 {{ hoveredEvent.playtime || '운영시간 정보 없음' }}</p>
+            <p class="text-slate-500">💰 {{ hoveredEvent.fee || '요금 정보 없음' }}</p>
+      </div>
+    </div>
+
+    <!-- [모달 1]: 축제·행사 상세 정보 모달 -->
+    <div v-if="selectedFestival" @click.self="closeFestivalDetail" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+      <div @click.stop class="glass-modal w-full max-w-2xl rounded-3xl p-6 shadow-2xl border border-white space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-start">
+          <span class="bg-cerulean-100 text-cerulean-800 text-xs font-semibold px-2.5 py-1 rounded-md">🎪 축제·행사</span>
+          <button @click="closeFestivalDetail" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+        </div>
+
+        <h3 class="text-xl font-bold text-slate-800">{{ selectedFestival.title }}</h3>
+
+        <!-- 대표 이미지 (클릭하면 풀사이즈로 보기) -->
+        <div v-if="selectedFestival.image" class="relative">
+          <img :src="selectedFestival.image" @click="openFullImage(selectedFestival.image)" class="w-full h-56 object-cover rounded-2xl border border-white cursor-zoom-in hover:opacity-90 transition">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-slate-600 bg-white/60 p-4 rounded-2xl border border-white">
+          <p><span class="font-semibold text-slate-700">📅 기간</span> {{ selectedFestival.date_start }} ~ {{ selectedFestival.date_end }}</p>
+          <p v-if="selectedFestival.place"><span class="font-semibold text-slate-700">📍 장소</span> {{ selectedFestival.place }}</p>
+          <p v-if="selectedFestival.address"><span class="font-semibold text-slate-700">🏠 주소</span> {{ selectedFestival.address }}</p>
+          <p v-if="selectedFestival.playtime"><span class="font-semibold text-slate-700">🕐 운영시간</span> {{ selectedFestival.playtime }}</p>
+          <p v-if="selectedFestival.fee"><span class="font-semibold text-slate-700">💰 요금</span> {{ selectedFestival.fee }}</p>
+          <p v-if="selectedFestival.tel"><span class="font-semibold text-slate-700">📞 전화</span> {{ selectedFestival.tel }}</p>
+          <p v-if="selectedFestival.eventhomepage" class="sm:col-span-2 break-all">
+            <span class="font-semibold text-slate-700">🔗 홈페이지</span>
+            <a :href="selectedFestival.eventhomepage" target="_blank" rel="noopener noreferrer" class="text-cerulean-700 hover:underline">{{ selectedFestival.eventhomepage }}</a>
+          </p>
+        </div>
+
+        <div v-if="selectedFestival.subevent" class="bg-white/60 p-4 rounded-2xl border border-white">
+          <p class="font-semibold text-slate-700 text-sm mb-1">➕ 부대행사</p>
+          <p class="text-sm text-slate-600 whitespace-pre-wrap">{{ selectedFestival.subevent }}</p>
+        </div>
+
+        <div v-if="selectedFestival.program" class="bg-white/60 p-4 rounded-2xl border border-white">
+          <p class="font-semibold text-slate-700 text-sm mb-1">📋 프로그램</p>
+          <p class="text-sm text-slate-600 whitespace-pre-wrap">{{ selectedFestival.program }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- [모달 2]: 라이트박스 이미지 풀사이즈 보기 -->
+    <div v-if="fullImageUrl" @click="closeFullImage" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 cursor-zoom-out animate-fade-in">
+      <img :src="fullImageUrl" class="max-w-full max-h-full rounded-2xl shadow-2xl">
+      <button @click="closeFullImage" class="absolute top-4 right-4 text-white/80 hover:text-white text-2xl font-bold">✕</button>
+    </div>
   </div>
 </template>
 
 <script setup>
+import api from '../api';
 import { ref, onMounted, watch, onUnmounted, nextTick } from 'vue';
 import Chart from 'chart.js/auto';
 import * as d3 from 'd3';
@@ -197,8 +244,105 @@ const updateCharts = () => {
   renderD3RegionStats();
 };
 
+
+const festivalCalendarRef = ref(null);
+const hoveredEvent = ref(null);
+const selectedFestival = ref(null); // 클릭 시 상세 정보를 담을 변수
+const fullImageUrl = ref(null);
+let calendarInstance = null;
+
+const closeFestivalDetail = () => { selectedFestival.value = null; };
+const openFullImage = (url) => { if (url) fullImageUrl.value = url; };
+const closeFullImage = () => { fullImageUrl.value = null; };
+
+const CALENDAR_COLORS = [
+  '#0f4c81', '#0ea5e9', '#f97316', '#16a34a', '#a855f7',
+  '#e11d48', '#0d9488', '#ca8a04', '#6366f1', '#db2777',
+];
+
+const colorForEvent = (key) => {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) % CALENDAR_COLORS.length;
+  return CALENDAR_COLORS[Math.abs(hash) % CALENDAR_COLORS.length];
+};
+
+const positionTooltip = (clientX, clientY) => {
+  if (!hoveredEvent.value || !festivalCalendarRef.value) return;
+  const containerRect = festivalCalendarRef.value.parentElement.getBoundingClientRect();
+  const offset = 6;
+  const tooltipWidth = 272;
+  const tooltipHeight = 260;
+  let x = clientX - containerRect.left + offset;
+  let y = clientY - containerRect.top + offset;
+  
+  if (x + tooltipWidth > containerRect.width) x = clientX - containerRect.left - tooltipWidth - offset;
+  if (y + tooltipHeight > containerRect.height) y = clientY - containerRect.top - tooltipHeight - offset;
+  
+  hoveredEvent.value.x = Math.max(8, x);
+  hoveredEvent.value.y = Math.max(8, y);
+};
+
+const handleMouseMove = (jsEvent) => {
+  if (hoveredEvent.value) positionTooltip(jsEvent.clientX, jsEvent.clientY);
+};
+
+const initCalendar = async () => {
+  await nextTick();
+
+  // 1. 여기서 ref(festivalCalendarRef)를 직접 사용합니다.
+  const calendarEl = festivalCalendarRef.value;
+  if (!calendarEl || calendarInstance) return;
+
+  if (!window.FullCalendar) {
+    console.error("🚨 FullCalendar 라이브러리를 찾을 수 없습니다. index.html의 CDN을 확인하세요.");
+    return;
+  }
+
+  let events = [];
+  try {
+    const response = await api.get('/api/public-data/festivals');
+    console.log("🎉 서버에서 받아온 축제 데이터 개수:", response.data.length, response.data);
+
+    events = response.data.map(event => ({
+      id: event.id,
+      title: event.title,
+      start: event.start,
+      end: event.end,
+      color: colorForEvent(String(event.id || event.title)),
+      extendedProps: { ...event },
+    }));
+  } catch (error) { console.error(error); }
+
+  // FullCalendar는 window 객체에 전역으로 로드되어 있어야 함 (CDN 사용 시)
+  calendarInstance = new window.FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    locale: 'ko',
+    height: 'auto',
+    events,
+    eventMouseEnter: (info) => {
+      const props = info.event.extendedProps;
+      hoveredEvent.value = {
+        title: info.event.title,
+        place: props.place,
+        fee: props.fee,
+        playtime: props.playtime,
+        image: props.image || '',
+        x: 0, y: 0,
+      };
+      positionTooltip(info.jsEvent.clientX, info.jsEvent.clientY);
+    },
+    eventMouseLeave: () => { hoveredEvent.value = null; },
+    eventClick: (info) => {
+      hoveredEvent.value = null;
+      selectedFestival.value = { title: info.event.title, ...info.event.extendedProps };
+    },
+  });
+  calendarInstance.render();
+};
+
 onMounted(() => {
-  // 카테고리 차트 
+
+    // 카테고리 차트 
   if (categoryChartRef.value) {
     categoryChartInstance = new Chart(categoryChartRef.value, {
       type: 'doughnut',
@@ -252,97 +396,6 @@ onMounted(() => {
   }
   
   updateCharts();
-});
-
-const festivalCalendarRef = ref(null);
-const hoveredEvent = ref(null);
-const selectedFestival = ref(null); // 클릭 시 상세 정보를 담을 변수
-let calendarInstance = null;
-
-const CALENDAR_COLORS = [
-  '#0f4c81', '#0ea5e9', '#f97316', '#16a34a', '#a855f7',
-  '#e11d48', '#0d9488', '#ca8a04', '#6366f1', '#db2777',
-];
-
-const colorForEvent = (key) => {
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) % CALENDAR_COLORS.length;
-  return CALENDAR_COLORS[Math.abs(hash) % CALENDAR_COLORS.length];
-};
-
-const positionTooltip = (clientX, clientY) => {
-  if (!hoveredEvent.value || !festivalCalendarRef.value) return;
-  const containerRect = festivalCalendarRef.value.parentElement.getBoundingClientRect();
-  const offset = 6;
-  const tooltipWidth = 272;
-  const tooltipHeight = 260;
-  let x = clientX - containerRect.left + offset;
-  let y = clientY - containerRect.top + offset;
-  
-  if (x + tooltipWidth > containerRect.width) x = clientX - containerRect.left - tooltipWidth - offset;
-  if (y + tooltipHeight > containerRect.height) y = clientY - containerRect.top - tooltipHeight - offset;
-  
-  hoveredEvent.value.x = Math.max(8, x);
-  hoveredEvent.value.y = Math.max(8, y);
-};
-
-const handleMouseMove = (jsEvent) => {
-  if (hoveredEvent.value) positionTooltip(jsEvent.clientX, jsEvent.clientY);
-};
-
-const initCalendar = async () => {
-  await nextTick();
-
-  // 1. 여기서 ref(festivalCalendarRef)를 직접 사용합니다.
-  const calendarEl = festivalCalendarRef.value;
-
-  if (!calendarEl || calendarInstance) return;
-  if (!festivalCalendarRef.value || calendarInstance) return;
-
-  let events = [];
-  try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/public-data/festivals`);
-    if (response.ok) {
-      const data = await response.json();
-      events = data.map(event => ({
-        id: event.id,
-        title: event.title,
-        start: event.start,
-        end: event.end,
-        color: colorForEvent(String(event.id || event.title)),
-        extendedProps: { ...event },
-      }));
-    }
-  } catch (error) { console.error(error); }
-
-  // FullCalendar는 window 객체에 전역으로 로드되어 있어야 함 (CDN 사용 시)
-  calendarInstance = new window.FullCalendar.Calendar(festivalCalendarRef.value, {
-    initialView: 'dayGridMonth',
-    locale: 'ko',
-    height: 'auto',
-    events,
-    eventMouseEnter: (info) => {
-      const props = info.event.extendedProps;
-      hoveredEvent.value = {
-        title: info.event.title,
-        place: props.place,
-        fee: props.fee,
-        playtime: props.playtime,
-        image: props.image || '',
-        x: 0, y: 0,
-      };
-      positionTooltip(info.jsEvent.clientX, info.jsEvent.clientY);
-    },
-    eventMouseLeave: () => { hoveredEvent.value = null; },
-    eventClick: (info) => {
-      hoveredEvent.value = null;
-      selectedFestival.value = { title: info.event.title, ...info.event.extendedProps };
-    },
-  });
-  calendarInstance.render();
-};
-
-onMounted(() => {
   document.addEventListener('mousemove', handleMouseMove);
   initCalendar();
 });
@@ -359,5 +412,4 @@ onUnmounted(() => {
   document.removeEventListener('mousemove', handleMouseMove);
   if (calendarInstance) calendarInstance.destroy();
 });
-
 </script>
