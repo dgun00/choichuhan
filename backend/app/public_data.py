@@ -607,6 +607,13 @@ def preview_file(relative_path: str, limit: int = 30) -> dict[str, Any]:
     }
 
 
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _strip_html_tags(value: str) -> str:
+    return _HTML_TAG_RE.sub("", value).strip()
+
+
 def get_festival_events() -> list[dict[str, Any]]:
     """FullCalendar에 바로 넣을 수 있는 형태로 축제·행사 일정을 반환합니다."""
     events: list[dict[str, Any]] = []
@@ -627,13 +634,13 @@ def get_festival_events() -> list[dict[str, Any]]:
 
             end = _parse_event_date(record.get("eventenddate")) or start
 
+            def _field(key: str) -> str:
+                return str(record.get(key) or "").strip()
+
             title = _pick_value(record, TITLE_KEYS) or "축제·행사"
             title = " ".join(title.split())[:120]
             address = _pick_value(record, ADDRESS_KEYS)
-            place = str(record.get("eventplace") or "").strip() or address
-            fee = str(record.get("usetimefestival") or "").strip()
-            playtime = str(record.get("playtime") or "").strip()
-            image = str(record.get("firstimage") or "").strip()
+            place = _field("eventplace") or address
 
             events.append(
                 {
@@ -642,11 +649,28 @@ def get_festival_events() -> list[dict[str, Any]]:
                     # FullCalendar의 종일 이벤트 end는 배타적(exclusive)이라 하루를 더해줍니다.
                     "start": start.isoformat(),
                     "end": (end + timedelta(days=1)).isoformat(),
+                    # 상세 모달 표시용 (exclusive 보정 없는 실제 날짜)
+                    "date_start": start.isoformat(),
+                    "date_end": end.isoformat(),
                     "place": place,
                     "address": address,
-                    "fee": fee,
-                    "playtime": playtime,
-                    "image": image,
+                    "fee": _field("usetimefestival"),
+                    "playtime": _field("playtime"),
+                    "image": _field("firstimage"),
+                    "tel": _field("tel"),
+                    "program": _field("program"),
+                    "subevent": _field("subevent"),
+                    "sponsor1": _field("sponsor1"),
+                    "sponsor1tel": _field("sponsor1tel"),
+                    "sponsor2": _field("sponsor2"),
+                    "sponsor2tel": _field("sponsor2tel"),
+                    "eventhomepage": _strip_html_tags(_field("eventhomepage")),
+                    "bookingplace": _field("bookingplace"),
+                    "agelimit": _field("agelimit"),
+                    "festivalgrade": _field("festivalgrade"),
+                    "placeinfo": _field("placeinfo"),
+                    "spendtimefestival": _field("spendtimefestival"),
+                    "discountinfofestival": _field("discountinfofestival"),
                 }
             )
 

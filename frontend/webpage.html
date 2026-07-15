@@ -186,6 +186,60 @@
       </div>
     </div>
 
+    <!-- 모달: 축제·행사 상세 정보 -->
+    <div v-if="selectedFestival" @click.self="closeFestivalDetail" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+      <div @click.stop class="glass-modal w-full max-w-2xl rounded-3xl p-6 shadow-2xl border border-white space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-start">
+          <span class="bg-cerulean-100 text-cerulean-800 text-xs font-semibold px-2.5 py-1 rounded-md">🎪 축제·행사</span>
+          <button @click="closeFestivalDetail" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+        </div>
+
+        <h3 class="text-xl font-bold text-slate-800">{{ selectedFestival.title }}</h3>
+
+        <!-- 대표 이미지 (클릭하면 풀사이즈로 보기) -->
+        <div v-if="selectedFestival.image" class="relative">
+          <img :src="selectedFestival.image" @click="openFullImage(selectedFestival.image)" class="w-full h-56 object-cover rounded-2xl border border-white cursor-zoom-in hover:opacity-90 transition">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-slate-600 bg-white/60 p-4 rounded-2xl border border-white">
+          <p><span class="font-semibold text-slate-700">📅 기간</span> {{ selectedFestival.date_start }} ~ {{ selectedFestival.date_end }}</p>
+          <p v-if="selectedFestival.place"><span class="font-semibold text-slate-700">📍 장소</span> {{ selectedFestival.place }}</p>
+          <p v-if="selectedFestival.address"><span class="font-semibold text-slate-700">🏠 주소</span> {{ selectedFestival.address }}</p>
+          <p v-if="selectedFestival.playtime"><span class="font-semibold text-slate-700">🕐 운영시간</span> {{ selectedFestival.playtime }}</p>
+          <p v-if="selectedFestival.fee"><span class="font-semibold text-slate-700">💰 요금</span> {{ selectedFestival.fee }}</p>
+          <p v-if="selectedFestival.tel"><span class="font-semibold text-slate-700">📞 전화</span> {{ selectedFestival.tel }}</p>
+          <p v-if="selectedFestival.agelimit"><span class="font-semibold text-slate-700">🔞 관람연령</span> {{ selectedFestival.agelimit }}</p>
+          <p v-if="selectedFestival.festivalgrade"><span class="font-semibold text-slate-700">🏅 축제등급</span> {{ selectedFestival.festivalgrade }}</p>
+          <p v-if="selectedFestival.spendtimefestival"><span class="font-semibold text-slate-700">⏱️ 관람소요시간</span> {{ selectedFestival.spendtimefestival }}</p>
+          <p v-if="selectedFestival.bookingplace"><span class="font-semibold text-slate-700">🎫 예매처</span> {{ selectedFestival.bookingplace }}</p>
+          <p v-if="selectedFestival.discountinfofestival"><span class="font-semibold text-slate-700">🏷️ 할인정보</span> {{ selectedFestival.discountinfofestival }}</p>
+          <p v-if="selectedFestival.placeinfo"><span class="font-semibold text-slate-700">🗺️ 위치안내</span> {{ selectedFestival.placeinfo }}</p>
+          <p v-if="selectedFestival.sponsor1"><span class="font-semibold text-slate-700">🏢 주최</span> {{ selectedFestival.sponsor1 }} <span v-if="selectedFestival.sponsor1tel">({{ selectedFestival.sponsor1tel }})</span></p>
+          <p v-if="selectedFestival.sponsor2"><span class="font-semibold text-slate-700">🤝 주관</span> {{ selectedFestival.sponsor2 }} <span v-if="selectedFestival.sponsor2tel">({{ selectedFestival.sponsor2tel }})</span></p>
+          <p v-if="selectedFestival.eventhomepage" class="sm:col-span-2 break-all">
+            <span class="font-semibold text-slate-700">🔗 홈페이지</span>
+            <a :href="selectedFestival.eventhomepage" target="_blank" rel="noopener noreferrer" class="text-cerulean-700 hover:underline">{{ selectedFestival.eventhomepage }}</a>
+          </p>
+        </div>
+
+        <div v-if="selectedFestival.subevent" class="bg-white/60 p-4 rounded-2xl border border-white">
+          <p class="font-semibold text-slate-700 text-sm mb-1">➕ 부대행사</p>
+          <p class="text-sm text-slate-600 whitespace-pre-wrap">{{ selectedFestival.subevent }}</p>
+        </div>
+
+        <div v-if="selectedFestival.program" class="bg-white/60 p-4 rounded-2xl border border-white">
+          <p class="font-semibold text-slate-700 text-sm mb-1">📋 프로그램</p>
+          <p class="text-sm text-slate-600 whitespace-pre-wrap">{{ selectedFestival.program }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 라이트박스: 축제 이미지 풀사이즈 보기 -->
+    <div v-if="fullImageUrl" @click="closeFullImage" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 cursor-zoom-out animate-fade-in">
+      <img :src="fullImageUrl" class="max-w-full max-h-full rounded-2xl shadow-2xl">
+      <button @click="closeFullImage" class="absolute top-4 right-4 text-white/80 hover:text-white text-2xl font-bold">✕</button>
+    </div>
+
     <!-- 모달 1: 게시글 작성 창 (글래스모피즘) -->
     <div v-if="showWriteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
       <div class="glass-modal w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-white space-y-4">
@@ -330,6 +384,20 @@
         const searchKeyword = ref('');
         const selectedCategory = ref('전체');
         const hoveredEvent = ref(null);
+        const selectedFestival = ref(null);
+        const fullImageUrl = ref(null);
+
+        const closeFestivalDetail = () => {
+          selectedFestival.value = null;
+        };
+
+        const openFullImage = (url) => {
+          if (url) fullImageUrl.value = url;
+        };
+
+        const closeFullImage = () => {
+          fullImageUrl.value = null;
+        };
 
         watch(currentTab, (tab) => {
           localStorage.setItem(ACTIVE_TAB_KEY, tab);
@@ -518,13 +586,7 @@
                 start: event.start,
                 end: event.end,
                 color: colorForEvent(String(event.id || event.title)),
-                extendedProps: {
-                  place: event.place,
-                  address: event.address,
-                  fee: event.fee,
-                  playtime: event.playtime,
-                  image: event.image,
-                },
+                extendedProps: { ...event },
               }));
             }
           } catch (error) {
@@ -585,7 +647,7 @@
                 place: props.place,
                 fee: props.fee,
                 playtime: props.playtime,
-                image: props.image,
+                image: props.image || '',
                 x: 0,
                 y: 0,
               };
@@ -593,6 +655,10 @@
             },
             eventMouseLeave: () => {
               hoveredEvent.value = null;
+            },
+            eventClick: (info) => {
+              hoveredEvent.value = null;
+              selectedFestival.value = { title: info.event.title, ...info.event.extendedProps };
             },
           });
           calendarInstance.render();
@@ -826,6 +892,7 @@
           selectedCategory, categories, getCategoryIcon, posts, newPost, filteredPosts,
           topPosts, submitPost, openDetail, likePost, verifyPassword, closeDetail,
           comments, newComment, submitComment, deleteComment, formatDate, hoveredEvent,
+          selectedFestival, closeFestivalDetail, fullImageUrl, openFullImage, closeFullImage,
           showChat, chatInput, chatHistory, sendChatMessage, isChatLoading, chatScrollRef
         };
       }
