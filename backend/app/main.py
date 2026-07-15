@@ -138,6 +138,10 @@ def _build_retrieval_prompt(keyword: str, public_results: list[dict[str, object]
                 "아래 제공된 부산 공공데이터 문맥을 우선 근거로 삼아 한국어로 친절하고 자연스럽게 답한다. "
                 "말투는 친절하고 간결하게 유지하고, 실제 상담하듯 한두 문장으로 먼저 핵심을 말한다. "
                 "문맥에 있는 장소·시설 이름, 주소 같은 정보는 적극적으로 활용해서 최대한 도움이 되게 답한다. "
+                "제공되는 데이터에는 날짜·요일·기간 정보가 전혀 없다. "
+                "그래서 질문에 '이번 주말', '이번달', '오늘', '내일', '언제' 같은 날짜·시점 관련 표현이 들어있으면, "
+                "답변 맨 앞에서 먼저 '데이터에 날짜 정보가 없어서 지금이 그 시점인지는 정확히 확인해 드릴 수 없어요'라는 취지로 한 문장으로 짚어주고, "
+                "그다음에 이어서 문맥에 있는 장소·시설 이름과 위치 정보로 최대한 답변을 계속한다. "
                 "문맥에 날짜·시간·요금처럼 구체적인 세부사항이 없으면 그 부분만 모른다고 솔직히 밝히고, "
                 "답변 전체를 거부하지 말고 아는 선에서는 계속 답한다. "
                 "문맥에 질문과 관련된 내용이 정말 하나도 없을 때만 '관련 정보를 찾지 못했습니다'라고 말하고, "
@@ -182,7 +186,12 @@ def _call_openai_chat(messages: list[dict[str, str]]) -> str:
     try:
         with urllib_request.urlopen(request, timeout=20) as response:
             response_data = json.load(response)
-    except (urllib_error.URLError, TimeoutError, ValueError):
+    except urllib_error.HTTPError as error:
+        body = error.read().decode("utf-8", errors="replace")
+        print(f"[OpenAI API error] status={error.code} body={body[:500]}")
+        return ""
+    except (urllib_error.URLError, TimeoutError, ValueError) as error:
+        print(f"[OpenAI API error] {type(error).__name__}: {error}")
         return ""
 
     choices = response_data.get("choices") or []
