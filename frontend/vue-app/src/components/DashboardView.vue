@@ -34,11 +34,29 @@
         <div ref="regionStatsRef" class="h-64 w-full"></div>
       </div>
     </div>
+
+    <!-- 축제 캘린더 영역 -->
+<div class="glass-card p-6 rounded-2xl relative mt-6">
+  <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4">
+    <span class="mr-2">📅</span> 부산 축제·행사 캘린더
+  </h3>
+  <div ref="festivalCalendarRef" class="bg-white/70 rounded-2xl p-3 border border-white"></div>
+  
+  <!-- 툴팁 (마우스 오버시 정보) -->
+  <div v-if="hoveredEvent" class="absolute z-50 w-64 bg-white rounded-2xl shadow-2xl border border-cerulean-100 p-3 text-xs space-y-1.5 pointer-events-none animate-fade-in"
+       :style="{ left: hoveredEvent.x + 'px', top: hoveredEvent.y + 'px' }">
+    <img v-if="hoveredEvent.image" :src="hoveredEvent.image" class="w-full h-28 object-cover rounded-xl mb-1">
+    <p class="font-bold text-slate-800 leading-snug">{{ hoveredEvent.title }}</p>
+    <p class="text-slate-500">📍 {{ hoveredEvent.place || '장소 정보 없음' }}</p>
+    <p class="text-slate-500">🕐 {{ hoveredEvent.playtime || '운영시간 정보 없음' }}</p>
+    <p class="text-slate-500">💰 {{ hoveredEvent.fee || '요금 정보 없음' }}</p>
+  </div>
+</div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, onUnmounted } from 'vue';
+import { ref, onMounted, watch, onUnmounted, nextTick } from 'vue';
 import Chart from 'chart.js/auto';
 import * as d3 from 'd3';
 
@@ -236,6 +254,99 @@ onMounted(() => {
   updateCharts();
 });
 
+const festivalCalendarRef = ref(null);
+const hoveredEvent = ref(null);
+const selectedFestival = ref(null); // 클릭 시 상세 정보를 담을 변수
+let calendarInstance = null;
+
+const CALENDAR_COLORS = [
+  '#0f4c81', '#0ea5e9', '#f97316', '#16a34a', '#a855f7',
+  '#e11d48', '#0d9488', '#ca8a04', '#6366f1', '#db2777',
+];
+
+const colorForEvent = (key) => {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) % CALENDAR_COLORS.length;
+  return CALENDAR_COLORS[Math.abs(hash) % CALENDAR_COLORS.length];
+};
+
+const positionTooltip = (clientX, clientY) => {
+  if (!hoveredEvent.value || !festivalCalendarRef.value) return;
+  const containerRect = festivalCalendarRef.value.parentElement.getBoundingClientRect();
+  const offset = 6;
+  const tooltipWidth = 272;
+  const tooltipHeight = 260;
+  let x = clientX - containerRect.left + offset;
+  let y = clientY - containerRect.top + offset;
+  
+  if (x + tooltipWidth > containerRect.width) x = clientX - containerRect.left - tooltipWidth - offset;
+  if (y + tooltipHeight > containerRect.height) y = clientY - containerRect.top - tooltipHeight - offset;
+  
+  hoveredEvent.value.x = Math.max(8, x);
+  hoveredEvent.value.y = Math.max(8, y);
+};
+
+const handleMouseMove = (jsEvent) => {
+  if (hoveredEvent.value) positionTooltip(jsEvent.clientX, jsEvent.clientY);
+};
+
+const initCalendar = async () => {
+  await nextTick();
+
+  // 1. 여기서 ref(festivalCalendarRef)를 직접 사용합니다.
+  const calendarEl = festivalCalendarRef.value;
+
+  if (!calendarEl || calendarInstance) return;
+  if (!festivalCalendarRef.value || calendarInstance) return;
+
+  let events = [];
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/public-data/festivals`);
+    if (response.ok) {
+      const data = await response.json();
+      events = data.map(event => ({
+        id: event.id,
+        title: event.title,
+        start: event.start,
+        end: event.end,
+        color: colorForEvent(String(event.id || event.title)),
+        extendedProps: { ...event },
+      }));
+    }
+  } catch (error) { console.error(error); }
+
+  // FullCalendar는 window 객체에 전역으로 로드되어 있어야 함 (CDN 사용 시)
+  calendarInstance = new window.FullCalendar.Calendar(festivalCalendarRef.value, {
+    initialView: 'dayGridMonth',
+    locale: 'ko',
+    height: 'auto',
+    events,
+    eventMouseEnter: (info) => {
+      const props = info.event.extendedProps;
+      hoveredEvent.value = {
+        title: info.event.title,
+        place: props.place,
+        fee: props.fee,
+        playtime: props.playtime,
+        image: props.image || '',
+        x: 0, y: 0,
+      };
+      positionTooltip(info.jsEvent.clientX, info.jsEvent.clientY);
+    },
+    eventMouseLeave: () => { hoveredEvent.value = null; },
+    eventClick: (info) => {
+      hoveredEvent.value = null;
+      selectedFestival.value = { title: info.event.title, ...info.event.extendedProps };
+    },
+  });
+  calendarInstance.render();
+};
+
+onMounted(() => {
+  document.addEventListener('mousemove', handleMouseMove);
+  initCalendar();
+});
+
 watch(() => props.posts, () => {
   updateCharts();
 }, { deep: true });
@@ -244,6 +355,9 @@ onUnmounted(() => {
   window.removeEventListener('resize', renderD3RegionStats);
   if (categoryChartInstance) categoryChartInstance.destroy();
   if (regionChartInstance) regionChartInstance.destroy();
+
+  document.removeEventListener('mousemove', handleMouseMove);
+  if (calendarInstance) calendarInstance.destroy();
 });
 
 </script>
