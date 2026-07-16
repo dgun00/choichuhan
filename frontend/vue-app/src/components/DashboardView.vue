@@ -1,102 +1,146 @@
 <template>
   <div class="space-y-6 animate-fade-in">
     <!-- 권역 소개 글래스 배너 -->
-    <div class="glass-card rounded-3xl p-8 relative overflow-hidden">
-      <div class="max-w-xl">
-        <span class="bg-cerulean-100 text-cerulean-800 text-xs font-bold px-3 py-1 rounded-full border border-cerulean-300">
+    <!-- 🌊 영웅(Hero) 배너 영역 (레이아웃 및 타이포그래피 개선) -->
+    <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8 mb-8 bg-gradient-to-br from-white/70 to-white/30 p-8 sm:p-12 rounded-[2.5rem] border border-white/80 shadow-[0_8px_30px_rgb(14,165,233,0.08)] backdrop-blur-xl overflow-hidden">
+    <!-- 배경 장식 -->
+    <div class="absolute -right-10 -top-20 w-72 h-72 bg-sky-300/20 rounded-full blur-3xl pointer-events-none"></div>
+    
+    <!-- 왼쪽 텍스트 영역 -->
+    <div class="relative z-10 max-w-2xl">
+      <div class="flex flex-wrap items-center gap-2 mb-6">
+        <span class="bg-sky-50 text-sky-700 text-[11px] font-extrabold px-3 py-1.5 rounded-full border border-sky-100 shadow-sm flex items-center tracking-wide">
+          <span class="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse mr-1.5"></span>실시간 익명 커뮤니티
+        </span>
+        <span class="bg-indigo-50 text-indigo-600 text-[11px] font-extrabold px-3 py-1.5 rounded-full border border-indigo-100 shadow-sm tracking-wide">
           ✨ 공공데이터 100% 연동
         </span>
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-cerulean-900 mt-3 leading-tight">
-          부산 권역 실시간 지역 정보 & 익명 커뮤니티
-        </h2>
-        <p class="text-slate-600 text-sm mt-2">
-          로그인 없이 자유롭게 맛집, 관광지, 축제 정보를 나누고 AI 챗봇에게 무엇이든 물어보세요!
-        </p>
       </div>
+      
+      <!-- 줄간격(leading)과 폰트 웨이트 조절로 세련미 강조 -->
+      <h2 class="text-3xl sm:text-5xl font-black leading-[1.25] mb-5 text-slate-800 tracking-tight" style="word-break: keep-all; letter-spacing: -0.03em;">
+        부산의 모든 순간을 잇다,<br/>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-600 block mt-2 pb-1">
+          우리의 파도타기 🌊
+        </span>
+      </h2>
+      
+      <p class="text-slate-600 text-[15px] sm:text-base font-medium leading-relaxed max-w-lg bg-white/40 p-4 rounded-2xl border border-white/60 shadow-sm">
+        숨겨진 해변 명소부터 현지인만 아는 찐맛집까지.<br/>
+        로그인 없이 자유롭게 나누고, AI 갈매기에게 부산을 물어보세요!
+      </p>
     </div>
 
-    <!-- 통계 차트 그리드 -->
+    <!-- 오른쪽 3D/글래스모피즘 아트웍 (빈 공간 채우기) -->
+    <div class="relative z-10 hidden md:flex w-56 h-56 shrink-0 items-center justify-center">
+      <div class="relative w-full h-full flex items-center justify-center animate-float">
+        <!-- 배경 컬러 쉐도우 -->
+        <div class="absolute inset-0 bg-gradient-to-tr from-sky-300 to-indigo-400 rounded-[2.5rem] rotate-12 opacity-70 blur-md"></div>
+        <!-- 메인 유리 패널 -->
+        <div class="absolute inset-0 bg-white/50 backdrop-blur-xl border-2 border-white rounded-[2.5rem] -rotate-6 shadow-2xl flex items-center justify-center text-7xl transition-transform hover:rotate-0 duration-300 cursor-default">
+          🌉
+        </div>
+        <!-- 장식용 미니 뱃지 -->
+        <div class="absolute -bottom-3 -right-3 bg-white backdrop-blur-md border border-sky-100 rounded-full w-16 h-16 flex items-center justify-center shadow-xl text-3xl animate-bounce" style="animation-duration: 3s;">
+          🐬
+        </div>
+        <div class="absolute -top-4 -left-4 bg-sky-500 rounded-full w-10 h-10 flex items-center justify-center shadow-lg text-lg border-2 border-white z-20 text-white">
+          ⭐
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <!-- 📈 통계 차트 그리드 -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-      <div class="glass-card p-6 rounded-2xl">
-        <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">📈</span> 카테고리별 게시글 현황</h3>
-        <div class="h-64 flex justify-center items-center">
+      <div class="bg-white/50 backdrop-blur-lg border border-white/70 shadow-lg shadow-slate-200/50 p-6 rounded-[2rem]">
+        <h3 class="text-[15px] font-bold text-slate-800 flex items-center mb-4"><span class="mr-2 text-xl drop-shadow-sm">🎯</span> 카테고리별 현황</h3>
+        <div class="h-60 flex justify-center items-center">
           <canvas ref="categoryChartRef"></canvas>
         </div>
       </div>
-      <div class="glass-card p-6 rounded-2xl">
-        <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">📍</span> 권역별 게시글 현황</h3>
-        <div class="h-64 flex justify-center items-center">
+      <div class="bg-white/50 backdrop-blur-lg border border-white/70 shadow-lg shadow-slate-200/50 p-6 rounded-[2rem]">
+        <h3 class="text-[15px] font-bold text-slate-800 flex items-center mb-4"><span class="mr-2 text-xl drop-shadow-sm">📍</span> 핫플레이스 분포</h3>
+        <div class="h-60 flex justify-center items-center">
           <canvas ref="regionChartRef"></canvas>
         </div>
       </div>
-      <div class="glass-card p-6 rounded-2xl">
-        <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4"><span class="mr-2">🏆</span> 인기 지역 통계</h3>
-        <div ref="regionStatsRef" class="h-64 w-full"></div>
+      <div class="bg-white/50 backdrop-blur-lg border border-white/70 shadow-lg shadow-slate-200/50 p-6 rounded-[2rem]">
+        <h3 class="text-[15px] font-bold text-slate-800 flex items-center mb-4"><span class="mr-2 text-xl drop-shadow-sm">🏆</span> 주간 인기 권역</h3>
+        <div ref="regionStatsRef" class="h-60 w-full flex items-center justify-center"></div>
       </div>
     </div>
 
-    <!-- 축제 캘린더 영역 -->
-    <div class="glass-card p-6 rounded-2xl relative mt-6">
-      <h3 class="text-base font-bold text-cerulean-900 flex items-center mb-4">
-        <span class="mr-2">📅</span> 부산 축제·행사 캘린더
-      </h3>
-      <div ref="festivalCalendarRef" class="bg-white/70 rounded-2xl p-3 border border-white min-h-[450px]"></div>
+
+    <!-- 📅 축제 캘린더 영역 -->
+    <div class="bg-white/50 backdrop-blur-lg border border-white/70 shadow-lg shadow-slate-200/50 p-6 sm:p-8 rounded-[2rem] relative mt-6">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-2">
+        <h3 class="text-lg font-bold text-slate-800 flex items-center">
+          <span class="mr-2 text-2xl drop-shadow-sm">🎇</span> 부산 축제·행사 캘린더
+        </h3>
+        <span class="text-xs text-sky-700 bg-sky-50/80 font-bold px-3 py-1.5 rounded-full border border-sky-200">
+          일정을 클릭하면 상세 정보를 볼 수 있어요!
+        </span>
+      </div>
+      <div ref="festivalCalendarRef" class="bg-white/60 backdrop-blur-md rounded-2xl p-4 border border-white min-h-[450px]"></div>
       
       <!-- 툴팁 (마우스 오버시 정보) -->
-      <div v-if="hoveredEvent" class="absolute z-50 w-64 bg-white rounded-2xl shadow-2xl border border-cerulean-100 p-3 text-xs space-y-1.5 pointer-events-none animate-fade-in"
-              :style="{ left: hoveredEvent.x + 'px', top: hoveredEvent.y + 'px' }">
-        <img v-if="hoveredEvent.image" :src="hoveredEvent.image" class="w-full h-28 object-cover rounded-xl mb-1">
-            <p class="font-bold text-slate-800 leading-snug">{{ hoveredEvent.title }}</p>
-            <p class="text-slate-500">📍 {{ hoveredEvent.place || '장소 정보 없음' }}</p>
-            <p class="text-slate-500">🕐 {{ hoveredEvent.playtime || '운영시간 정보 없음' }}</p>
-            <p class="text-slate-500">💰 {{ hoveredEvent.fee || '요금 정보 없음' }}</p>
+      <div v-if="hoveredEvent" class="absolute z-50 w-72 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-blue-100 p-4 text-xs space-y-2 pointer-events-none animate-fade-in transition-all"
+          :style="{ left: hoveredEvent.x + 'px', top: hoveredEvent.y + 'px' }">
+        <img v-if="hoveredEvent.image" :src="hoveredEvent.image" class="w-full h-32 object-cover rounded-xl mb-2 shadow-sm border border-slate-100">
+        <p class="font-bold text-base text-slate-800 leading-snug">{{ hoveredEvent.title }}</p>
+        <div class="space-y-1.5 text-slate-600 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100/50">
+          <p class="flex"><span class="w-4 mr-1">📍</span> <span class="flex-1 line-clamp-1 font-medium">{{ hoveredEvent.place || '장소 미정' }}</span></p>
+          <p class="flex"><span class="w-4 mr-1">🕐</span> <span class="flex-1">{{ hoveredEvent.playtime || '시간 안내 없음' }}</span></p>
+          <p class="flex"><span class="w-4 mr-1">💳</span> <span class="flex-1">{{ hoveredEvent.fee || '무료 또는 안내 없음' }}</span></p>
+        </div>
       </div>
     </div>
 
     <!-- [모달 1]: 축제·행사 상세 정보 모달 -->
     <div v-if="selectedFestival" @click.self="closeFestivalDetail" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-      <div @click.stop class="glass-modal w-full max-w-2xl rounded-3xl p-6 shadow-2xl border border-white space-y-4 max-h-[85vh] overflow-y-auto">
+      <div @click.stop class="bg-white/95 backdrop-blur-2xl w-full max-w-2xl rounded-[2rem] p-6 sm:p-8 shadow-2xl border border-white space-y-5 max-h-[85vh] overflow-y-auto custom-scrollbar">
         <div class="flex justify-between items-start">
-          <span class="bg-cerulean-100 text-cerulean-800 text-xs font-semibold px-2.5 py-1 rounded-md">🎪 축제·행사</span>
-          <button @click="closeFestivalDetail" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+          <span class="bg-rose-50 text-rose-600 text-xs font-bold px-3 py-1.5 rounded-lg border border-rose-200 shadow-sm">🎆 지역 축제·행사</span>
+          <button @click="closeFestivalDetail" class="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition font-bold text-lg">✕</button>
         </div>
 
-        <h3 class="text-xl font-bold text-slate-800">{{ selectedFestival.title }}</h3>
+        <h3 class="text-2xl font-extrabold text-slate-800 tracking-tight">{{ selectedFestival.title }}</h3>
 
-        <!-- 대표 이미지 (클릭하면 풀사이즈로 보기) -->
-        <div v-if="selectedFestival.image" class="relative">
-          <img :src="selectedFestival.image" @click="openFullImage(selectedFestival.image)" class="w-full h-56 object-cover rounded-2xl border border-white cursor-zoom-in hover:opacity-90 transition">
+        <div v-if="selectedFestival.image" class="relative group">
+          <img :src="selectedFestival.image" @click="openFullImage(selectedFestival.image)" class="w-full h-64 object-cover rounded-2xl shadow-sm border border-slate-100 cursor-zoom-in group-hover:opacity-95 transition">
+          <div class="absolute bottom-3 right-3 bg-black/50 text-white text-[10px] px-2 py-1 rounded-md pointer-events-none">클릭하여 확대</div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-slate-600 bg-white/60 p-4 rounded-2xl border border-white">
-          <p><span class="font-semibold text-slate-700">📅 기간</span> {{ selectedFestival.date_start }} ~ {{ selectedFestival.date_end }}</p>
-          <p v-if="selectedFestival.place"><span class="font-semibold text-slate-700">📍 장소</span> {{ selectedFestival.place }}</p>
-          <p v-if="selectedFestival.address"><span class="font-semibold text-slate-700">🏠 주소</span> {{ selectedFestival.address }}</p>
-          <p v-if="selectedFestival.playtime"><span class="font-semibold text-slate-700">🕐 운영시간</span> {{ selectedFestival.playtime }}</p>
-          <p v-if="selectedFestival.fee"><span class="font-semibold text-slate-700">💰 요금</span> {{ selectedFestival.fee }}</p>
-          <p v-if="selectedFestival.tel"><span class="font-semibold text-slate-700">📞 전화</span> {{ selectedFestival.tel }}</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-600 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+          <p><span class="font-bold text-slate-800 mr-1 text-xs bg-white px-2 py-1 rounded shadow-sm">📅 기간</span> {{ selectedFestival.date_start }} ~ {{ selectedFestival.date_end }}</p>
+          <p v-if="selectedFestival.place"><span class="font-bold text-slate-800 mr-1 text-xs bg-white px-2 py-1 rounded shadow-sm">📍 장소</span> {{ selectedFestival.place }}</p>
+          <p v-if="selectedFestival.address"><span class="font-bold text-slate-800 mr-1 text-xs bg-white px-2 py-1 rounded shadow-sm">🏠 주소</span> {{ selectedFestival.address }}</p>
+          <p v-if="selectedFestival.playtime"><span class="font-bold text-slate-800 mr-1 text-xs bg-white px-2 py-1 rounded shadow-sm">🕐 시간</span> {{ selectedFestival.playtime }}</p>
+          <p v-if="selectedFestival.fee"><span class="font-bold text-slate-800 mr-1 text-xs bg-white px-2 py-1 rounded shadow-sm">💰 요금</span> {{ selectedFestival.fee }}</p>
+          <p v-if="selectedFestival.tel"><span class="font-bold text-slate-800 mr-1 text-xs bg-white px-2 py-1 rounded shadow-sm">📞 전화</span> {{ selectedFestival.tel }}</p>
           <p v-if="selectedFestival.eventhomepage" class="sm:col-span-2 break-all">
-            <span class="font-semibold text-slate-700">🔗 홈페이지</span>
-            <a :href="selectedFestival.eventhomepage" target="_blank" rel="noopener noreferrer" class="text-cerulean-700 hover:underline">{{ selectedFestival.eventhomepage }}</a>
+            <span class="font-bold text-slate-800 mr-1 text-xs bg-white px-2 py-1 rounded shadow-sm">🔗 홈페이지</span>
+            <a :href="selectedFestival.eventhomepage" target="_blank" rel="noopener noreferrer" class="text-sky-600 hover:underline font-medium ml-1">{{ selectedFestival.eventhomepage }}</a>
           </p>
         </div>
 
-        <div v-if="selectedFestival.subevent" class="bg-white/60 p-4 rounded-2xl border border-white">
-          <p class="font-semibold text-slate-700 text-sm mb-1">➕ 부대행사</p>
-          <p class="text-sm text-slate-600 whitespace-pre-wrap">{{ selectedFestival.subevent }}</p>
+        <div v-if="selectedFestival.subevent" class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+          <p class="font-bold text-slate-800 text-sm mb-2 flex items-center"><span class="mr-1">➕</span> 부대행사</p>
+          <p class="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{{ selectedFestival.subevent }}</p>
         </div>
 
-        <div v-if="selectedFestival.program" class="bg-white/60 p-4 rounded-2xl border border-white">
-          <p class="font-semibold text-slate-700 text-sm mb-1">📋 프로그램</p>
-          <p class="text-sm text-slate-600 whitespace-pre-wrap">{{ selectedFestival.program }}</p>
+        <div v-if="selectedFestival.program" class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+          <p class="font-bold text-slate-800 text-sm mb-2 flex items-center"><span class="mr-1">📋</span> 프로그램</p>
+          <p class="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{{ selectedFestival.program }}</p>
         </div>
       </div>
     </div>
 
     <!-- [모달 2]: 라이트박스 이미지 풀사이즈 보기 -->
-    <div v-if="fullImageUrl" @click="closeFullImage" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 cursor-zoom-out animate-fade-in">
-      <img :src="fullImageUrl" class="max-w-full max-h-full rounded-2xl shadow-2xl">
-      <button @click="closeFullImage" class="absolute top-4 right-4 text-white/80 hover:text-white text-2xl font-bold">✕</button>
+    <div v-if="fullImageUrl" @click="closeFullImage" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 cursor-zoom-out animate-fade-in">
+      <img :src="fullImageUrl" class="max-w-full max-h-full rounded-2xl shadow-2xl border border-white/10">
+      <button @click="closeFullImage" class="absolute top-6 right-6 text-white/70 hover:text-white w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-xl transition backdrop-blur-sm">✕</button>
     </div>
   </div>
 </template>

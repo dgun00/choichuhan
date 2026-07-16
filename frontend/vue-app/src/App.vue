@@ -4,34 +4,48 @@
     <div class="fixed top-[-10%] left-[-10%] w-96 h-96 bg-cerulean-300/30 rounded-full blur-3xl pointer-events-none"></div>
     <div class="fixed bottom-[10%] right-[-5%] w-[30rem] h-[30rem] bg-blue-400/20 rounded-full blur-3xl pointer-events-none"></div>
 
-    <div class="relative z-10 max-w-5xl mx-auto px-4 py-6">
-      <header class="glass-nav text-white rounded-2xl px-6 py-4 mb-8 flex justify-between items-center shadow-lg">
-        <div class="flex items-center space-x-2 cursor-pointer" @click="currentTab = 'home'">
-          <span class="text-2xl">🐳</span>
-          <h1 class="text-xl font-bold tracking-wider">LocalHub <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full ml-1">BUSAN</span></h1>
-        </div>
-        <nav class="flex space-x-2 text-sm font-medium">
-          <button @click="currentTab = 'home'" :class="currentTab === 'home' ? 'bg-white text-cerulean-700 shadow' : 'hover:bg-white/10'" class="px-4 py-2 rounded-xl transition">📊 대시보드</button>
-          <button @click="currentTab = 'board'" :class="currentTab === 'board' ? 'bg-white text-cerulean-700 shadow' : 'hover:bg-white/10'" class="px-4 py-2 rounded-xl transition">💬 익명 게시판</button>
-        </nav>
-      </header>
+    <div class="relative z-10 max-w-6xl mx-auto px-4 py-6 sm:py-8">
+    <!-- 🌊 상단 네비게이션 헤더 (배경 그라데이션 및 입체감 추가) -->
+    <header class="relative bg-gradient-to-r from-white/90 via-sky-50/80 to-blue-50/90 backdrop-blur-2xl border border-white rounded-[2rem] px-6 py-4 mb-8 flex flex-col sm:flex-row justify-between items-center shadow-[0_8px_30px_rgb(14,165,233,0.1)] gap-4 overflow-hidden">
+      <!-- 헤더 내부 장식용 빛 반사 효과 -->
+      <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/60 to-transparent pointer-events-none"></div>
 
-      <!-- 탭 1: 대시보드 -->
-      <DashboardView v-show="currentTab === 'home'" 
-      :posts="posts"  />
+      <div class="relative z-10 flex items-center space-x-2 cursor-pointer transition-transform hover:scale-105" @click="currentTab = 'home'">
+        <span class="text-3xl drop-shadow-sm">🌊</span>
+        <h1 class="text-2xl font-black tracking-tight text-slate-800" style="letter-spacing: -0.05em;">
+          BUSAN WAVE
+          <span class="inline-block text-[10px] bg-gradient-to-r from-sky-500 to-indigo-600 text-white px-2.5 py-0.5 rounded-full ml-1 align-middle font-bold tracking-widest shadow-md">LIVE</span>
+        </h1>
+      </div>
+      
+      <nav class="relative z-10 flex p-1.5 bg-white/60 backdrop-blur-md rounded-2xl border border-white shadow-inner">
+        <button @click="currentTab = 'home'" :class="currentTab === 'home' ? 'bg-white text-sky-600 shadow-sm font-extrabold' : 'text-slate-500 hover:text-sky-600 font-semibold'" class="px-5 py-2.5 rounded-xl transition-all text-sm flex items-center">
+          <span class="mr-1.5 text-lg">📊</span> 로컬 대시보드
+        </button>
+        <button @click="currentTab = 'board'" :class="currentTab === 'board' ? 'bg-white text-sky-600 shadow-sm font-extrabold' : 'text-slate-500 hover:text-sky-600 font-semibold'" class="px-5 py-2.5 rounded-xl transition-all text-sm flex items-center">
+          <span class="mr-1.5 text-lg">💬</span> 실시간 라운지
+        </button>
+      </nav>
+    </header>
 
-      <!-- 탭 2: 익명 게시판 -->
-      <BoardView 
-        v-show="currentTab === 'board'" 
-        :posts="posts" 
-        @refresh-posts="loadPosts"
-        @open-write="showWriteModal = true"
-        @open-detail="handleOpenDetail" 
-      />
+  <!-- 탭 1: 대시보드 -->
+  <DashboardView 
+    v-show="currentTab === 'home'" 
+    :posts="posts"  
+  />
 
-      <!-- 플로팅 챗봇 -->
-      <ChatbotWidget />
-    </div>
+  <!-- 탭 2: 익명 게시판 -->
+  <BoardView 
+    v-show="currentTab === 'board'" 
+    :posts="posts" 
+    @refresh-posts="loadPosts"
+    @open-write="showWriteModal = true"
+    @open-detail="handleOpenDetail" 
+  />
+
+  <!-- 플로팅 챗봇 -->
+  <ChatbotWidget />
+  </div>
   </div>
 </template>
 

@@ -12,107 +12,133 @@
     </div>
 
     <!-- 카테고리 필터 & 검색바 -->
-    <div class="flex flex-col sm:flex-row justify-between gap-3 bg-white/40 p-3 rounded-2xl border border-white">
-      <div class="flex flex-wrap gap-1.5">
-        <button v-for="cat in categories" :key="cat" @click="selectedCategory = cat" :class="selectedCategory === cat ? 'bg-cerulean-700 text-white font-bold' : 'bg-white/80 text-slate-600 hover:bg-white'" class="px-3 py-1.5 rounded-lg text-xs transition shadow-sm">
-          {{ getCategoryIcon(cat) }} {{ cat }}
+    <div class="flex flex-col md:flex-row justify-between gap-4 bg-white/40 p-2.5 rounded-2xl border border-white/60 backdrop-blur-sm">
+      <div class="flex flex-wrap gap-2">
+        <button v-for="cat in categories" :key="cat" @click="selectedCategory = cat" 
+          :class="selectedCategory === cat ? 'bg-sky-500 text-white font-bold shadow-md shadow-sky-500/20 border-transparent' : 'bg-white/70 text-slate-600 hover:bg-white border-white/60'" 
+          class="px-4 py-2 rounded-xl text-xs transition-all flex items-center gap-1.5 border backdrop-blur-md">
+          <span class="text-sm drop-shadow-sm">{{ getCategoryIcon(cat) }}</span> {{ cat }}
         </button>
       </div>
-      <div class="relative min-w-[220px]">
-        <input v-model="searchKeyword" type="text" placeholder="🔍 제목, 내용 검색..." class="w-full bg-white/90 border border-slate-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-cerulean-500">
+      <div class="relative w-full md:w-64">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+        <input v-model="searchKeyword" type="text" placeholder="어떤 정보가 궁금하신가요?" class="w-full bg-white/80 border border-white rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 transition-all font-medium placeholder-slate-400 shadow-inner">
       </div>
     </div>
 
-    <!-- 게시글 목록 테이블 -->
-    <div class="overflow-x-auto">
+    <!-- 트렌디한 게시글 목록 테이블 -->
+    <div class="overflow-x-auto rounded-2xl border border-white/50 bg-white/30 backdrop-blur-sm">
       <table class="w-full text-left border-collapse">
         <thead>
-          <tr class="border-b border-slate-200/80 text-slate-400 text-xs uppercase">
-            <th class="py-3 px-2 font-medium w-16">번호</th>
-            <th class="py-3 px-2 font-medium w-24">분류</th>
-            <th class="py-3 px-2 font-medium">제목</th>
-            <th class="py-3 px-2 font-medium w-20 text-center">조회</th>
-            <th class="py-3 px-2 font-medium w-20 text-center">좋아요</th>
+          <tr class="text-slate-500 text-xs uppercase tracking-wider border-b-2 border-white/60 bg-white/40">
+            <th class="py-4 px-4 font-bold w-16 text-center">NO</th>
+            <th class="py-4 px-4 font-bold w-32">카테고리</th>
+            <th class="py-4 px-4 font-bold">제목</th>
+            <th class="py-4 px-4 font-bold w-24 text-center">조회</th>
+            <th class="py-4 px-4 font-bold w-24 text-center">반응</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100 text-sm">
-          <tr v-for="post in filteredPosts" :key="post.id" @click="openDetail(post)" class="hover:bg-white/60 transition cursor-pointer">
-            <td class="py-3 px-2 text-slate-400 text-xs">{{ post.id }}</td>
-            <td class="py-3 px-2"><span class="bg-cerulean-50 text-cerulean-700 text-[11px] font-semibold px-2 py-0.5 rounded-md border border-cerulean-100">{{ getCategoryIcon(post.category) }} {{ post.category }}</span></td>
-            <td class="py-3 px-2 font-medium text-slate-700 hover:text-cerulean-700 transition">{{ post.title }}</td>
-            <td class="py-3 px-2 text-center text-xs text-slate-500">{{ post.views }}</td>
-            <td class="py-3 px-2 text-center text-xs text-pink-500 font-semibold">❤️ {{ post.likes }}</td>
+        <tbody class="text-sm divide-y divide-white/40">
+          <tr v-for="post in filteredPosts" :key="post.id" @click="openDetail(post)" class="hover:bg-white/70 transition-colors cursor-pointer group">
+            <td class="py-4 px-4 text-center text-slate-400 font-bold text-xs">{{ post.id }}</td>
+            <td class="py-4 px-4">
+              <span class="bg-blue-50/70 backdrop-blur-sm text-sky-700 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-blue-200/50 shadow-sm">
+                {{ getCategoryIcon(post.category) }} {{ post.category }}
+              </span>
+            </td>
+            <td class="py-4 px-4 font-bold text-slate-700 group-hover:text-sky-600 transition-colors truncate max-w-[200px] sm:max-w-md">
+              {{ post.title }}
+            </td>
+            <td class="py-4 px-4 text-center text-xs font-medium text-slate-500">{{ post.views }}</td>
+            <td class="py-4 px-4 text-center">
+              <span class="inline-flex items-center text-xs font-bold text-pink-500 bg-pink-50/70 backdrop-blur-sm px-2.5 py-1 rounded-full border border-pink-100/50 shadow-sm">
+                🌺 {{ post.likes }}
+              </span>
+            </td>
           </tr>
           <tr v-if="filteredPosts.length === 0">
-            <td colspan="5" class="py-12 text-center text-slate-400 text-sm">등록된 게시글이 없습니다. 첫 글의 주인공이 되어보세요! ✨</td>
+            <td colspan="5" class="py-20 text-center text-slate-400">
+              <div class="text-5xl mb-4 opacity-50 drop-shadow-md">🏖️</div>
+              <p class="text-sm font-bold text-slate-500">아직 등록된 정보가 없어요. 첫 글의 주인공이 되어보세요!</p>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- 모달 1: 게시글 작성 창 -->
-    <div v-if="showWriteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-      <div class="glass-modal w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-white space-y-4">
-        <h3 class="text-lg font-bold text-cerulean-900 flex items-center">✨ 익명 게시글 작성</h3>
-        <div class="space-y-3 text-sm">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">카테고리</label>
-            <select v-model="newPost.category" class="w-full bg-white/90 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-cerulean-500 outline-none">
-              <option v-for="cat in categories.slice(1)" :key="cat" :value="cat">{{ getCategoryIcon(cat) }} {{ cat }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">제목</label>
-            <input v-model="newPost.title" type="text" placeholder="제목을 입력하세요" class="w-full bg-white/90 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-cerulean-500 outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">내용</label>
-            <textarea v-model="newPost.content" rows="4" placeholder="자유롭게 지역 정보를 나누어 보세요!" class="w-full bg-white/90 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-cerulean-500 outline-none"></textarea>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1 text-rose-600">수정/삭제용 비밀번호 (평문 저장)</label>
-            <input v-model="newPost.password" type="password" placeholder="숫자 4자리 등 기억할 비밀번호" class="w-full bg-white/90 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-cerulean-500 outline-none">
-          </div>
-        </div>
-        <div class="flex justify-end space-x-2 pt-2">
-          <button @click="showWriteModal = false" class="px-4 py-2 rounded-xl bg-slate-200/80 text-slate-600 font-medium text-xs hover:bg-slate-300 transition">취소</button>
-          <button @click="submitPost" class="px-5 py-2 rounded-xl bg-cerulean-700 text-white font-medium text-xs hover:bg-cerulean-800 transition shadow">등록하기</button>
-        </div>
+ <!-- 모달 1: 게시글 작성 창 -->
+<div v-if="showWriteModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-sm animate-fade-in">
+  <div class="bg-white/95 backdrop-blur-2xl w-full max-w-lg rounded-[2rem] p-8 shadow-2xl border border-white space-y-5">
+    <h3 class="text-xl font-bold text-slate-800 flex items-center border-b border-slate-200/60 pb-3">
+      <span class="mr-2 text-2xl">✍️</span> 로컬 정보 나누기
+    </h3>
+    <div class="space-y-4 text-sm">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1.5 ml-1">카테고리</label>
+        <select v-model="newPost.category" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-sky-400/50 outline-none transition-all font-medium text-slate-700 shadow-inner">
+          <option v-for="cat in categories.slice(1)" :key="cat" :value="cat">{{ getCategoryIcon(cat) }} {{ cat }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1.5 ml-1">제목</label>
+        <input v-model="newPost.title" type="text" placeholder="어떤 유용한 정보를 공유하실 건가요?" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-sky-400/50 outline-none transition-all shadow-inner">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1.5 ml-1">내용</label>
+        <textarea v-model="newPost.content" rows="4" placeholder="현지인만 아는 꿀팁을 자유롭게 적어주세요!" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-sky-400/50 outline-none transition-all resize-none shadow-inner"></textarea>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-rose-500 mb-1.5 ml-1">비밀번호 (수정/삭제용 평문)</label>
+        <input v-model="newPost.password" type="password" placeholder="기억하기 쉬운 숫자 4자리" class="w-full bg-rose-50/50 border border-rose-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-rose-400/50 outline-none transition-all text-rose-600 placeholder-rose-300 font-bold shadow-inner">
       </div>
     </div>
+    <div class="flex justify-end space-x-2 pt-4">
+      <button @click="showWriteModal = false" class="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200 transition">취소</button>
+      <button @click="submitPost" class="px-6 py-2.5 rounded-xl bg-sky-500 text-white font-bold text-sm hover:bg-sky-600 transition shadow-md">등록하기</button>
+    </div>
+  </div>
+</div>
 
-    <!-- 모달 2: 게시글 상세 & 비밀번호 확인 창 -->
-    <div v-if="selectedPost" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-      <div class="glass-modal w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-white space-y-4">
-        <div class="flex justify-between items-start">
-          <span class="bg-cerulean-100 text-cerulean-800 text-xs font-semibold px-2.5 py-1 rounded-md">{{ getCategoryIcon(selectedPost.category) }} {{ selectedPost.category }}</span>
-          <button @click="selectedPost = null; pwdMode = null" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
-        </div>
-        <h3 class="text-xl font-bold text-slate-800">{{ selectedPost.title }}</h3>
-        <p class="text-sm text-slate-600 min-h-[5rem] bg-white/60 p-4 rounded-2xl whitespace-pre-wrap border border-white">{{ selectedPost.content }}</p>
-        
-        <div class="flex justify-between items-center text-xs text-slate-400 pt-2 border-t border-slate-200/60">
-          <span>👁️ 조회수 {{ selectedPost.views }}</span>
-          <button @click="selectedPost.likes++" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold transition flex items-center space-x-1">
-            <span>❤️ 좋아요 {{ selectedPost.likes }}</span>
-          </button>
-        </div>
+<!-- 모달 2: 게시글 상세 & 비밀번호 확인 창 -->
+<div v-if="selectedPost" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-sm animate-fade-in">
+  <div class="bg-white/95 backdrop-blur-2xl w-full max-w-xl rounded-[2rem] p-6 sm:p-8 shadow-2xl border border-white space-y-5">
+    <div class="flex justify-between items-start">
+      <span class="bg-blue-50/80 text-sky-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-200/60 shadow-sm">
+        {{ getCategoryIcon(selectedPost.category) }} {{ selectedPost.category }}
+      </span>
+      <button @click="selectedPost = null; pwdMode = null" class="text-slate-400 hover:text-slate-600 font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition text-lg">✕</button>
+    </div>
+    
+    <h3 class="text-2xl font-extrabold text-slate-800 tracking-tight">{{ selectedPost.title }}</h3>
+    
+    <div class="min-h-[8rem] bg-slate-50/80 p-5 rounded-2xl text-slate-700 text-sm leading-relaxed whitespace-pre-wrap border border-slate-100 shadow-inner">
+      {{ selectedPost.content }}
+    </div>
+    
+    <div class="flex justify-between items-center text-xs pt-2">
+      <span class="text-slate-400 font-bold bg-white/50 px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">👁️ 조회수 {{ selectedPost.views }}</span>
+      <button @click="likeSelected" class="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-pink-600 font-bold transition flex items-center space-x-1.5 border border-rose-100 shadow-sm">
+        <span class="text-base">🌺</span> <span>도움돼요 {{ selectedPost.likes }}</span>
+      </button>
+    </div>
 
-        <div v-if="!pwdMode" class="flex justify-end space-x-2 pt-2">
-          <button @click="pwdMode = 'edit'" class="px-3 py-1.5 bg-slate-200/80 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-medium transition">✏️ 수정</button>
-          <button @click="pwdMode = 'delete'" class="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-medium transition">🗑️ 삭제</button>
-        </div>
+    <div v-if="!pwdMode" class="flex justify-end space-x-2 pt-4 border-t border-slate-100">
+      <button @click="pwdMode = 'edit'" class="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition">수정</button>
+      <button @click="pwdMode = 'delete'" class="px-5 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-xl text-xs font-bold transition">삭제</button>
+    </div>
 
-        <div v-else class="bg-cerulean-50/80 p-3 rounded-2xl border border-cerulean-200 space-y-2">
-          <p class="text-xs font-bold text-cerulean-900">🔒 {{ pwdMode === 'edit' ? '수정' : '삭제' }} 권한 확인</p>
-          <div class="flex space-x-2">
-            <input v-model="inputPwd" type="password" placeholder="비밀번호 입력" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs outline-none">
-            <button @click="verifyPassword" class="px-4 py-1.5 bg-cerulean-700 text-white rounded-xl text-xs font-bold shadow hover:bg-cerulean-800">확인</button>
-            <button @click="pwdMode = null; inputPwd = ''" class="px-3 py-1.5 bg-slate-300 text-slate-700 rounded-xl text-xs">취소</button>
-          </div>
-        </div>
+    <!-- 비밀번호 확인 영역 -->
+    <div v-else class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 mt-4 animate-fade-in shadow-inner">
+      <p class="text-xs font-bold text-slate-700 flex items-center"><span class="mr-1">🔒</span> {{ pwdMode === 'edit' ? '수정' : '삭제' }} 권한 확인</p>
+      <div class="flex space-x-2">
+        <input v-model="inputPwd" type="password" placeholder="비밀번호 입력" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20">
+        <button @click="verifyPassword" class="px-5 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold shadow hover:bg-slate-700 transition">확인</button>
+        <button @click="pwdMode = null; inputPwd = ''" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-300 transition">취소</button>
       </div>
     </div>
+  </div>
+</div>
+
   </div>
 </template>
 
