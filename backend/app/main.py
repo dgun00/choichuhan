@@ -199,7 +199,7 @@ def _call_openai_chat(messages: list[dict[str, str]]) -> str:
     )
 
     try:
-        with urllib_request.urlopen(request, timeout=20) as response:
+        with urllib_request.urlopen(request, timeout=60) as response:
             response_data = json.load(response)
     except urllib_error.HTTPError as error:
         body = error.read().decode("utf-8", errors="replace")
