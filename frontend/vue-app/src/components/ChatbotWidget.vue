@@ -41,6 +41,7 @@
 <script setup>
 import { ref, nextTick, watch} from 'vue';
 import axios from 'axios';
+import api from '../api';
 
 const STORAGE_KEY = 'localhub.chat.history';
 const MAX_HISTORY = 100;
@@ -96,7 +97,7 @@ const sendChatMessage = async () => {
   chatInput.value = '';
 
   try {
-    const res = await axios.post(`${API_BASE}/api/chat`, { message: userMsg });
+    const res = await api.post('/api/chat', { message: userMsg });
     const answer = res?.data?.answer ?? '죄송합니다. 응답을 받지 못했습니다.';
     chatHistory.value.push({ role: 'assistant', content: answer });
   } catch (err) {

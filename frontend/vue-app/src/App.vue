@@ -41,6 +41,7 @@ import axios from 'axios';
 import DashboardView from './components/DashboardView.vue';
 import BoardView from './components/BoardView.vue';
 import ChatbotWidget from './components/ChatbotWidget.vue';
+import api from './api';
 
 const ACTIVE_TAB_KEY = 'localhub.currentTab';
 const currentTab = ref(localStorage.getItem(ACTIVE_TAB_KEY) || 'home');
@@ -54,7 +55,7 @@ watch(currentTab, (tab) => {
 
 const loadPosts = async () => {
   try {
-    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/posts`);
+    const response = await api.get('/api/posts');
     console.log('API /api/posts response:', response.data);
     posts.value = response.data;
   } catch (error) {
