@@ -1,0 +1,42 @@
+.venv/
+backend/.venv/
+.env
+backend/.env
+backend/.env.example
+backend/localhub.db
+
+# Python cache and bytecode
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Editor directories and files
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
